@@ -13,7 +13,7 @@
     flex={false}
     startMinimized={true}
     toggle={true}
-    title="Gleis"
+    title="Selected gleis data"
   >
     <IconButton
       name={!isConnectionPaneVisible ? 'eye-slash' : 'eye'}
