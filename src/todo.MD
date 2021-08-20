@@ -10,3 +10,5 @@
 - zoom and center
 
 - use inline styles for print + image export / organize stylesheet for the svg
+
+- implement threeway correctly
