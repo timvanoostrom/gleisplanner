@@ -7,5 +7,5 @@ export default defineConfig({
   server: {
     port: 5001,
   },
-  base: '/gleisplanner/dist/',
+  base: '/gleisplanner/',
 });
