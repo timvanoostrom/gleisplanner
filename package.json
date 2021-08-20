@@ -1,0 +1,31 @@
+{
+  "name": "vite-gleisplanner",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@types/d3-path": "^2.0.0",
+    "@types/lodash.debounce": "^4.0.6",
+    "bezier-js": "^4.0.3",
+    "d3-path": "^2.0.0",
+    "dialog-polyfill": "^0.5.6",
+    "localforage": "^1.9.0",
+    "lodash.debounce": "^4.0.8",
+    "nanoid": "^3.1.20",
+    "parse-svg-path": "^0.1.2",
+    "svelte-color-picker": "^1.0.7",
+    "svelte-sortable-list": "^1.1.0",
+    "svg-path-properties": "^1.0.11",
+    "svg-path-reverse": "^1.2.1"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^1.0.0-next.7",
+    "svelte": "^3.37.0",
+    "svelte-preprocess": "^4.7.2",
+    "typescript": "^4.2.4",
+    "vite": "^2.3.0"
+  }
+}
