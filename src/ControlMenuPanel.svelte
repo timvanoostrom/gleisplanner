@@ -150,9 +150,10 @@
     display: flex;
     width: 16px;
     height: 16px;
-    border: 1px solid red;
+    border: 1px solid #ccc;
     text-decoration: none;
     align-items: center;
     justify-content: center;
+    margin-right: 4px;
   }
 </style>
