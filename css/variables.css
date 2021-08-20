@@ -1,0 +1,9 @@
+:root {
+  --scale: 0.5;
+  --gleis-label-display: block;
+  --gleis-label-color: #000000;
+  --gleis-color: #000000;
+  --gleis-handle-hover-fill: #000000;
+  --gleis-fill-color: #ffffff;
+  --gleis-fill-color--activated: yellow;
+}
