@@ -1,4 +1,5 @@
 import { Direction } from '../types';
+
 export const PROJECT_PREFIX = 'gp';
 export const TRACK_DISTANCE = 61.6; // 61.6 - ??compensation??
 
@@ -16,3 +17,5 @@ export const MIN_SCALE = 0.1;
 
 export const ROOT_POINT_ORIGIN_DIRECTION = Direction.R;
 export const ROOT_POINT_ORIGIN_CONNECT_ANGLE = -A90;
+
+export const GLEISPLAN_NAME_DEFAULT = '1629620107621-gleisplan-default.json';

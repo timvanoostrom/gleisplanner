@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import svelte from '@sveltejs/vite-plugin-svelte';
+import base from './base.json';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -7,5 +8,5 @@ export default defineConfig({
   server: {
     port: 5001,
   },
-  base: '/gleisplanner/',
+  base: `/${base}/`,
 });

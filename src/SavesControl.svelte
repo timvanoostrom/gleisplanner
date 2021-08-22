@@ -1,5 +1,8 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import base from '../base.json';
   import Button from './Button.svelte';
+  import { GLEISPLAN_NAME_DEFAULT } from './config/constants';
   import ControlMenuPanel from './ControlMenuPanel.svelte';
   import {
     createNewGleisPlan,
@@ -46,6 +49,16 @@
   }
 
   $: gleisPlanSavedActive = $gleisPlanSaved[$gleisPlanSavedId];
+
+  onMount(() => {
+    if (gleisPlanSavedActive === undefined) {
+      fetch(`/${base}/plans/${GLEISPLAN_NAME_DEFAULT}`)
+        .then((response) => response.json())
+        .then((gleisplan) => {
+          importSavedConfig(gleisplan);
+        });
+    }
+  });
 </script>
 
 <ControlMenuPanel
