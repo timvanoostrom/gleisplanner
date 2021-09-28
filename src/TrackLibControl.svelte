@@ -11,7 +11,6 @@
   } from './config/trackLib';
   import ControlMenuPanel from './ControlMenuPanel.svelte';
   import { protoGleisIdActive } from './store/gleis';
-  import { editMode } from './store/workspace';
 
   const [activeProtoGleisId, setActiveProtoGleisId] = protoGleisIdActive;
 
@@ -26,7 +25,7 @@
   }
 
   function onKeydownRouter(event) {
-    if ($editMode === 'gleis' && $trackLibQuickSelect) {
+    if ($trackLibQuickSelect) {
       const trackEntriesQuickSelect = Object.entries($trackLibQuickSelect);
       if (['1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(event.key)) {
         if (trackEntriesQuickSelect[parseInt(event.key, 10) - 1]) {

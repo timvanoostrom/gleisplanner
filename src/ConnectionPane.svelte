@@ -8,45 +8,40 @@
   let isConnectionPaneVisible: boolean = true;
 </script>
 
-<div class="ConnectionPane">
-  <ControlMenuPanel
-    flex={false}
-    startMinimized={true}
-    toggle={true}
-    title="Selected gleis data"
-  >
-    <IconButton
-      name={!isConnectionPaneVisible ? 'eye-slash' : 'eye'}
-      on:click={() => (isConnectionPaneVisible = !isConnectionPaneVisible)}
-    />
-    {#if isConnectionPaneVisible}
-      <div class="ListContainer">
-        <ul>
-          {#each $gleisPlannedSelected as gleis}
-            <li class:isActiveGleis={$gleisIdsActive.includes(gleis.id)}>
-              <div>
-                <span>{gleis.id}</span>
-                <span>{$trackLibByArtNr[gleis.artnr].title}</span>
-              </div>
-              <pre>
+<ControlMenuPanel
+  flex={false}
+  startMinimized={true}
+  toggle={true}
+  title="Selected gleis data"
+>
+  <IconButton
+    name={!isConnectionPaneVisible ? 'eye-slash' : 'eye'}
+    on:click={() => (isConnectionPaneVisible = !isConnectionPaneVisible)}
+  />
+  {#if isConnectionPaneVisible}
+    <div class="ListContainer">
+      <ul>
+        {#each $gleisPlannedSelected as gleis}
+          <li class:isActiveGleis={$gleisIdsActive.includes(gleis.id)}>
+            <div>
+              <span>{gleis.id}</span>
+              <span>{$trackLibByArtNr[gleis.artnr].title}</span>
+            </div>
+            <pre>
           {JSON.stringify(
             { ...gleis, points: gleis.points.map(p => ({ ...p, connectAngle: toDeg(p.connectAngle||0) })) },
             null,
             ' '
           )}
         </pre>
-            </li>
-          {/each}
-        </ul>
-      </div>
-    {/if}
-  </ControlMenuPanel>
-</div>
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
+</ControlMenuPanel>
 
 <style>
-  .ConnectionPane {
-    position: relative;
-  }
   .ListContainer {
     max-height: 200px;
     overflow: auto;

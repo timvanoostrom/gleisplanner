@@ -1,4 +1,6 @@
-import type { Point } from '../types';
+import { A180 } from '../config/constants';
+import { svgPathProperties } from 'svg-path-properties';
+import type { PathSegmentProps, Point } from '../types';
 
 export function toRad(degrees: number) {
   return degrees * (Math.PI / 180.0);
@@ -148,6 +150,8 @@ export function normalizeAngle(angle: number) {
     angleDeg += 360;
   } else if (angleDeg > 180) {
     angleDeg -= 360;
+  } else if (angleDeg < 0) {
+    angleDeg = 360 + angleDeg;
   }
   return toRad(angleDeg);
 }
@@ -161,4 +165,12 @@ export function calculateAngle(A: Point, B: Point, C: Point) {
   const BC = Math.sqrt(Math.pow(B.x - C.x, 2) + Math.pow(B.y - C.y, 2));
   const AC = Math.sqrt(Math.pow(C.x - A.x, 2) + Math.pow(C.y - A.y, 2));
   return Math.acos((BC * BC + AB * AB - AC * AC) / (2 * BC * AB));
+}
+
+export function calculateTrackLengthCM(path: PathSegmentProps) {
+  if (path) {
+    const l = new svgPathProperties(String(path.d)).getTotalLength();
+    return l ? Math.round(l / 10) : 0;
+  }
+  return 0;
 }

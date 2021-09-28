@@ -15,11 +15,12 @@
     updateGleis,
   } from './store/gleis';
   import { baseGroup, planeSvg } from './store/plane';
-  import type { ProtoSegmentFlex } from './types';
+  import type { Point, ProtoSegmentFlex } from './types';
+  import Rotator from './Rotator.svelte';
 
   // drag handler
   let drag: boolean = false;
-  let indexes;
+  let controlPointIndexes;
 
   const protoSegment = $protoGleisActive.segments[0] as ProtoSegmentFlex;
 
@@ -36,6 +37,27 @@
       flexPoints = $singleFlexActive.points;
     }
   });
+
+  function updateFlexPoints(
+    flexPoints: Point[],
+    controlPointIndex: number,
+    x: number,
+    y: number
+  ) {
+    const p = flexPoints[controlPointIndex];
+    const startOrEndPointIndex =
+      controlPointIndex === 1 ? controlPointIndex - 1 : controlPointIndex + 1;
+    const p2 = flexPoints[startOrEndPointIndex];
+
+    p.x = x;
+    p.y = y;
+
+    const angle = toRad(cAngle(p.x, p.y, p2.x, p2.y)) - A90 * p2.direction;
+    flexPoints[startOrEndPointIndex].connectAngle = angle;
+    flexPoints[controlPointIndex] = p;
+
+    return flexPoints;
+  }
 
   const onDragFlexPointEnd = (event) => {
     if (!$connectFlexPointStart) {
@@ -68,15 +90,15 @@
   let moveHorizontal;
   let moveVertical;
 
-  function onDragControlPoint(event: MouseEvent, index?: 1 | 2) {
+  function onDragControlPoint(event: MouseEvent, controlPointIndex?: 1 | 2) {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
 
-    if (index) {
+    if (controlPointIndex) {
       // 1 is CP1
       // 2 is CP2
-      indexes = [index];
+      controlPointIndexes = [controlPointIndex];
     }
 
     const type = event.type;
@@ -109,17 +131,8 @@
         }
       );
 
-      for (const index of indexes) {
-        const p = flexPoints[index];
-        const index2 = index === 1 ? index - 1 : index + 1;
-        const p2 = flexPoints[index2];
-
-        p.x = x;
-        p.y = y;
-
-        const angle = toRad(cAngle(p.x, p.y, p2.x, p2.y)) - A90 * p2.direction;
-        flexPoints[index2].connectAngle = angle;
-        flexPoints[index] = p;
+      for (const controlPointIndex of controlPointIndexes) {
+        flexPoints = updateFlexPoints(flexPoints, controlPointIndex, x, y);
       }
     }
 

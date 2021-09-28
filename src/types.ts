@@ -13,6 +13,7 @@ export interface AppConfig {
   sidebarState: SidebarState;
   activeTrackLibId: string;
   selectionToolsEnabled: boolean;
+  measureToolEnabled: boolean;
 }
 
 export type GleisType =
@@ -86,6 +87,20 @@ export type PathConnectPoint = (PathPointStart | PathPointEnd) & {
 export type PathConnectPoints = PathConnectPoint[];
 export type FlexPoints = Point[];
 
+export interface SlopeConfigBase {
+  id: string;
+  title: string;
+  gleisIds: Array<GleisPropsPlanned['id']>;
+  percentage: number;
+  startElevation: number;
+}
+export interface SlopeConfig extends SlopeConfigBase {
+  totalLength: number;
+  endElevation: number;
+}
+
+export type Slopes = Record<string, SlopeConfig>;
+
 export interface GleisPropsPlanned {
   id: string;
   artnr: string;
@@ -93,6 +108,8 @@ export interface GleisPropsPlanned {
   layerId: Layer['id'];
   points: Point[];
   variant?: string;
+  slope?: SlopeConfig;
+  pathSegments: PathSegmentProps[];
 }
 
 export interface ProtoSegmentCurve {
@@ -141,7 +158,7 @@ export interface ProtoGleis<T extends ProtoGleisSegment = ProtoGleisSegment> {
 export type AnglePreset = Array<number | ((c: Point) => Point) | undefined>;
 
 export interface PathSegmentProps {
-  d: d3Path;
+  d: d3Path | string;
   type: 'main' | 'outer' | 'p1' | 'p2' | 'add' | 'splits';
 }
 
@@ -173,14 +190,12 @@ export interface Layer {
 }
 
 export type SidebarState = 'visible' | 'hidden';
-export type EditMode = 'gleis' | 'guides' | 'shapes';
 
 export interface Guide {
   id: string;
   points: Point[];
   label: string;
   layerId: Layer['id'];
-  isShape?: boolean;
 }
 export type Guides = Guide[];
 

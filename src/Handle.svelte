@@ -54,7 +54,7 @@
   .Handle {
     fill: #fff;
     fill-opacity: 1;
-    stroke: #000;
+    stroke: var(--Handle-stroke-color, #000);
     stroke-width: 1px;
   }
   .HandleClick:hover {

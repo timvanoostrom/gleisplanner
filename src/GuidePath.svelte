@@ -6,7 +6,6 @@
 
   export let points: Point[] = [];
   export let isSelected: boolean = false;
-  export let isShape: boolean = false;
   export let isTemp: boolean = false;
 
   const dispatch = createEventDispatcher();
@@ -57,12 +56,12 @@
   }
 </script>
 
-<g on:click class="Guide" class:shape={isShape} class:isSelected>
+<g on:click class="Guide" class:isSelected>
   {#if path}
     <path d={pathString} class="GuidePath" />
   {/if}
   {#each points as point, index}
-    {#if (isTemp && !isShape && index !== points.length - 1) || (!isTemp && !isShape) || (isShape && index === 0)}
+    {#if (isTemp && index !== points.length - 1) || !isTemp}
       <circle
         cx={point.x}
         cy={point.y}
@@ -103,14 +102,7 @@
     stroke-width: 10px;
     stroke: red;
   }
-  :global([data-editmode='guides']) .isSelected .GuidePath,
-  :global([data-editmode='guides']) .Guide:hover .GuidePath {
-    stroke: blue;
-  }
-  :global([data-editmode='guides']) .Guide:hover .PathPoint,
-  :global([data-editmode='guides']) .isSelected .PathPoint {
-    stroke: blue;
-  }
+
   .GuidePath {
     stroke: #000;
     stroke-width: 2px;

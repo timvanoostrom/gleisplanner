@@ -21,7 +21,6 @@
   import { availableSpaceElement, baseGroup, planeSvg } from './store/plane';
   import {
     dimensions,
-    editMode,
     isGridVisible,
     scale,
     setViewBoxTranslation,
@@ -207,9 +206,6 @@
   };
 
   const onAddGleis = (event) => {
-    if ($editMode !== 'gleis') {
-      return;
-    }
     const { x, y } = baseGroupPoint(
       $planeSvg,
       $baseGroup,
@@ -233,40 +229,36 @@
   };
 
   function onKeyDownRouter(event) {
-    if ($editMode === 'gleis') {
-      switch (true) {
-        case event.key === 'Backspace' && event.target.tagName !== 'INPUT':
-          event.preventDefault();
-          deleteGleisActive();
-          break;
-        case event.key.toLowerCase() === 'a' &&
-          event.metaKey &&
-          event.target.tagName !== 'INPUT':
-          event.preventDefault();
-          // CMD + a selects  all gleis  in active layer
-          // CMD + Shift + A selects all gleis in every layer
-          let ids = event.shiftKey
-            ? Object.values($gleisPlanned)
-                .filter((gleis) => {
-                  const layer = $layersById[gleis.layerId];
-                  if (!layer) {
-                    console.log('layer does not exist', gleis.layerId);
-                    return;
-                  }
-                  return !layer.locked && layer.isVisible;
-                })
-                .map((gleis) => gleis.id)
-            : Object.values($gleisPlanned)
-                .filter(
-                  (gleis) => gleis.layerId === $layerControl.activeLayerId
-                )
-                .map((gleis) => gleis.id);
-          setGleisIdsActive(ids);
-          break;
+    switch (true) {
+      case event.key === 'Backspace' && event.target.tagName !== 'INPUT':
+        event.preventDefault();
+        deleteGleisActive();
+        break;
+      case event.key.toLowerCase() === 'a' &&
+        event.metaKey &&
+        event.target.tagName !== 'INPUT':
+        event.preventDefault();
+        // CMD + a selects  all gleis  in active layer
+        // CMD + Shift + A selects all gleis in every layer
+        let ids = event.shiftKey
+          ? Object.values($gleisPlanned)
+              .filter((gleis) => {
+                const layer = $layersById[gleis.layerId];
+                if (!layer) {
+                  console.log('layer does not exist', gleis.layerId);
+                  return;
+                }
+                return !layer.locked && layer.isVisible;
+              })
+              .map((gleis) => gleis.id)
+          : Object.values($gleisPlanned)
+              .filter((gleis) => gleis.layerId === $layerControl.activeLayerId)
+              .map((gleis) => gleis.id);
+        setGleisIdsActive(ids);
+        break;
 
-        default:
-          break;
-      }
+      default:
+        break;
     }
   }
 

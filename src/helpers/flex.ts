@@ -3,16 +3,16 @@ import * as d3 from 'd3-path';
 import { get, writable } from 'svelte/store';
 import { svgPathProperties } from 'svg-path-properties';
 import { A180, A90, GLEIS_WIDTH, GLEIS_WIDTH_WB } from '../config/constants';
-import { cAngle, normalizeAngle, toRad } from '../helpers/geometry';
+import { cAngle, normalizeAngle, toDeg, toRad } from '../helpers/geometry';
 import { connectGleis } from '../store/gleis';
-import {
-  Direction,
+import type {
   FlexPoints,
   PathSegmentProps,
   Point,
   ProtoSegmentFlex,
   ProtoSegmentStraight,
 } from '../types';
+import { Direction } from '../types';
 import { range } from './app';
 import { getMidPoint, rotate } from './geometry';
 import { addStraightPathTo, generateStraightPaths } from './straight';
@@ -53,7 +53,6 @@ export function calculateFlexPoints({
   if (connectStart) {
     const connectEnd = {
       ...pointOrigin,
-      // direction: connectStart.direction === 1 ? -1 : 1,
     };
 
     const len = Math.hypot(
@@ -93,8 +92,12 @@ export function calculateFlexPoints({
       }
     }
 
-    // With connect start angle
-    if (connectStart.connectAngle !== -1 && connectEnd.connectAngle === -1) {
+    // // With connect start angle
+    if (
+      !connectStart.root &&
+      connectStart.connectAngle !== -1 &&
+      connectEnd.connectAngle === -1
+    ) {
       const a = connectStart.connectAngle - (pointsAngle - A90);
 
       calcStartAngle = connectStart.connectAngle + A90 * connectStart.direction;
@@ -152,25 +155,32 @@ export function calculateFlexPoints({
       type: 'c2',
     };
 
-    const flexPoints: FlexPoints = [
-      point1,
-      {
-        x: cp1x,
-        y: cp1y,
-        type: 'fcp1',
-      },
-      {
-        x: cp2x,
-        y: cp2y,
-        type: 'fcp2',
-      },
-      point2,
-    ];
+    const controlPoint1: Point = {
+      x: cp1x,
+      y: cp1y,
+      type: 'fcp1',
+    };
+
+    const controlPoint2: Point = {
+      x: cp2x,
+      y: cp2y,
+      type: 'fcp2',
+    };
+
+    let flexPoints: FlexPoints = [point1, controlPoint1, controlPoint2, point2];
 
     if (connectStart?.type === 'c1') {
       point1.type = 'c2';
       point2.type = 'c1';
     }
+
+    // point1.connectAngle =
+    //   toRad(cAngle(controlPoint1.x, controlPoint1.y, point1.x, point1.y)) -
+    //   A90 * point1.direction;
+
+    // point2.connectAngle =
+    //   toRad(cAngle(controlPoint2.x, controlPoint2.y, point2.x, point2.y)) -
+    //   A90 * point2.direction;
 
     return flexPoints;
   } else {

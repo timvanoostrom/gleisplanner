@@ -3,7 +3,7 @@ import {
   ROOT_POINT_ORIGIN_CONNECT_ANGLE,
   ROOT_POINT_ORIGIN_DIRECTION,
 } from '../config/constants';
-import { trackLib } from '../config/trackLib';
+import { trackLib, trackLibByArtNr } from '../config/trackLib';
 import { generateID, round } from '../helpers/app';
 import {
   calculateCrossingPoints,
@@ -70,15 +70,37 @@ export function unsetGleisIdActive(deselectIds: string[]) {
 
 export const gleisPlannedDB = db<GleisPlanned>('gleisPlanned', {});
 
+export const gleisPlannedWithPaths = derived(
+  [gleisPlannedDB, trackLibByArtNr],
+  ([gleisPlannedDB, trackLibByArtNr]) => {
+    const gleisPlannedEntries = Object.entries(gleisPlannedDB).map(
+      ([id, gleis]) => {
+        let g = gleis;
+        if (!g.pathSegments) {
+          g = Object.assign({}, gleis, {
+            pathSegments: generateSegments(gleis, trackLibByArtNr[gleis.artnr]),
+          });
+        }
+        return [id, g] as const;
+      }
+    );
+    return gleisPlannedEntries;
+  }
+);
+
 export const gleisPlanned = derived(
   [gleisPlannedDB, layersById],
-  ([gleisPlanned, layersById]) => {
-    const visibleGleisPlanned = Object.entries(gleisPlanned).filter(
+  ([gleisPlannedDB, layersById]) => {
+    console.time('gleis calc');
+    const gleisPlannedEntries = Object.entries(gleisPlannedDB);
+    const visibleGleisPlanned = gleisPlannedEntries.filter(
       ([id, { layerId }]) => {
         return layersById[layerId]?.isVisible;
       }
     );
-    return Object.fromEntries(visibleGleisPlanned);
+    const entries = Object.fromEntries(visibleGleisPlanned);
+    console.timeEnd('gleis calc');
+    return entries;
   }
 );
 
@@ -97,11 +119,50 @@ export function updateGleisPlanned(
   });
 }
 
+export function updateGleis(
+  gleisToUpdate: Array<
+    Partial<GleisPropsPlanned> & {
+      id: GleisPropsPlanned['id'];
+    }
+  >
+) {
+  updateGleisPlanned((gleis) => {
+    const gleisUpdated = {
+      ...gleis,
+    };
+
+    for (const gleisProps of gleisToUpdate) {
+      const gleisPropsSource = gleis[gleisProps.id] || {};
+      const gleisUpdatePayload = {
+        ...gleisPropsSource,
+        ...gleisProps,
+      } as unknown as GleisPropsPlanned;
+
+      if ('points' in gleisProps) {
+        const proto = get(trackLibByArtNr)[gleisUpdatePayload.artnr];
+        console.log('updateGLeis', proto, gleisUpdatePayload);
+        const segments = generateSegments(gleisUpdatePayload, proto);
+        gleisUpdatePayload.pathSegments = segments.map((ps) => {
+          return {
+            ...ps,
+            d: ps.d.toString(),
+          };
+        });
+      }
+
+      gleisUpdated[gleisProps.id] = gleisUpdatePayload;
+    }
+    return gleisUpdated;
+  });
+  // updateGleisPlanned(gleisUpdated);
+}
+
 export const gleisPlannedUnselected = derived(
   [gleisIdsActive, gleisPlanned],
   ([gleisIdsActive, gleisPlanned]) => {
     return Object.values(gleisPlanned).filter(
-      (gleis) => !gleisIdsActive.includes(gleis.id)
+      (gleis: GleisPropsPlanned): gleis is GleisPropsPlanned =>
+        !gleisIdsActive.includes(gleis.id)
     );
   }
 );
@@ -111,7 +172,8 @@ export const gleisPlannedUnselectedByLayerId = derived(
   ([gleisIdsActive, gleisPlanned, layerControl]) => {
     const layers: Record<string, GleisPropsPlanned[]> = {};
     for (const gleis of Object.values(gleisPlanned).filter(
-      (gleis) => !gleisIdsActive.includes(gleis.id)
+      (gleis: GleisPropsPlanned): gleis is GleisPropsPlanned =>
+        !gleisIdsActive.includes(gleis.id)
     )) {
       if (!layers[gleis.layerId]) {
         layers[gleis.layerId] = [];
@@ -133,9 +195,9 @@ export const gleisPlannedUnselectedByLayerId = derived(
 export const gleisPlannedSelected = derived(
   [gleisIdsActive, gleisPlanned],
   ([gleisIdsActive, gleisPlanned]) => {
-    const gleisPlannedSelected = [];
-    for (const id in gleisPlanned) {
-      if (gleisIdsActive.indexOf(id) > -1) {
+    const gleisPlannedSelected: GleisPropsPlanned[] = [];
+    for (const id of gleisIdsActive) {
+      if (id in gleisPlanned) {
         gleisPlannedSelected.push(gleisPlanned[id]);
       }
     }
@@ -157,7 +219,7 @@ export const gleisPlannedAll = derived(
   [gleisIdsActive, gleisPlanned, layerControl],
   ([gleisIdsActive, gleisPlanned, layerControl]) => {
     const layers = {};
-    for (const gleis of Object.values(gleisPlanned)) {
+    for (const gleis of Object.values<GleisPropsPlanned>(gleisPlanned)) {
       let layerId = gleis.layerId;
       if (gleisIdsActive.includes(gleis.id)) {
         layerId = 'selected';
@@ -342,55 +404,19 @@ export function connectGleis({ pointOrigin, flexPoints }: ConnectGleisProps) {
       break;
   }
 
-  const gleisUpdated: Record<GleisPropsPlanned['id'], GleisPropsPlanned> = {
-    ...gleisAll,
-  };
-
   const gleis: GleisPropsPlanned = {
     points,
     id,
     artnr,
     layerId,
     type,
+    pathSegments: [],
   };
 
-  gleisUpdated[id] = gleis;
-
-  gleisPlannedDB.set(gleisUpdated);
-
+  updateGleis([gleis]);
   addToPointConnections(gleis);
 
   setGleisIdActive(id);
-}
-
-export function updateGleis(
-  gleisToUpdate: Array<
-    Partial<GleisPropsPlanned> & {
-      id: GleisPropsPlanned['id'];
-    }
-  >
-) {
-  gleisPlannedDB.update((gleis) => {
-    const gleisUpdated = {
-      ...gleis,
-    };
-
-    for (const gleisProps of gleisToUpdate) {
-      if (!gleis || !gleis[gleisProps.id]) {
-        console.info('Gleis with %s not found', [gleisProps.id]);
-        return;
-      }
-
-      const gleisUpdate = {
-        ...gleis[gleisProps.id],
-        ...gleisProps,
-      };
-
-      gleisUpdated[gleisProps.id] = gleisUpdate;
-    }
-    return gleisUpdated;
-  });
-  // updateGleisPlanned(gleisUpdated);
 }
 
 export function deleteGleisActive(ids?: string[]) {
@@ -450,6 +476,44 @@ export function findConnectingPointOrigin(
 
   return [connectingPointOrigin, connectingGleis];
 }
+
+window.removeLastGleis = () => {
+  const entries: Array<[string, GleisPropsPlanned]> = Object.entries(
+    get(gleisPlanned)
+  );
+  entries.pop();
+  gleisPlannedDB.set(Object.fromEntries(entries));
+};
+
+window.updateGleisPlanned = () => {
+  const withPaths = get(gleisPlannedWithPaths);
+  updateGleisPlanned(() =>
+    Object.fromEntries(
+      withPaths.map(([id, gleis]) => {
+        // let points = gleis.points;
+        // if (gleis.type === 'Flex' && points[0].type === 'c2') {
+        //   const [c2, cp1, cp2, c1] = points;
+        //   points = [c1, cp1, cp2, c2];
+        // } else if (points[0].type === 'c2') {
+        //   const [c2, c1] = points;
+        //   points = [c1, c2];
+        // }
+        return [
+          id,
+          Object.assign(gleis, {
+            // points,
+            pathSegments: gleis.pathSegments.map((ps) => {
+              return {
+                ...ps,
+                d: ps.d.toString(),
+              };
+            }),
+          }),
+        ];
+      })
+    )
+  );
+};
 
 // window.updateIds = () => {
 //   const gleis = JSON.parse(JSON.stringify(get(gleisPlanned)));
@@ -564,3 +628,105 @@ export function getRootPointOrigin(x: number, y: number): Point {
     root: true,
   };
 }
+
+export function shortCircuitConnections() {
+  // points that are in same layer and same type
+  // points that are not in same layer but same type and endpoints
+  return derived([gleisPlanned], ([gleisPlanned]) => {
+    const scc = [];
+    const c = {};
+
+    for (const gleis of Object.values<GleisPropsPlanned>(gleisPlanned)) {
+      for (const p of gleis.points) {
+        if (p.type === 'c1' || p.type === 'c2') {
+          const coordString = getCoordString(p);
+          if (!c[coordString]) {
+            c[coordString] = [{ p, id: gleis.id }];
+          } else if (p.type === c[coordString][0].p.type) {
+            c[coordString].push({ p, id: gleis.id });
+
+            const isSameLayer =
+              gleis.layerId === gleisPlanned[c[coordString][0].id].layerId;
+
+            // const isLayerConnection = !isSameLayer &&
+            // the opposite point of connecting gleis also has connection
+
+            if (isSameLayer) {
+              scc.push(p);
+            }
+          }
+        }
+      }
+    }
+
+    return scc;
+  });
+}
+
+// export function shortCircuitConnections() {
+//   // points that are in same layer and same type
+//   // points that are not in same layer but same type and endpoints
+//   return derived([gleisPlanned], ([gleisPlanned]) => {
+//     const scc = [];
+//     const c: Record<string, GleisRef[]> = {};
+
+//     for (const gleis of Object.values(gleisPlanned)) {
+//       for (const p of gleis.points) {
+//         if (p.type === 'c1' || p.type === 'c2') {
+//           const coordString = getCoordString(p);
+//           const gleisRef = { p, id: gleis.id, layerId: gleis.layerId };
+//           if (!c[coordString]) {
+//             c[coordString] = [gleisRef];
+//           } else {
+//             c[coordString].push(gleisRef);
+//           }
+//         }
+//       }
+//     }
+
+//     for (const gleisRefs of Object.values(c)) {
+//       const isSameType = gleisRefs.every(
+//         (r, i) => i !== 0 && r.p.type === gleisRefs[0].p.type
+//       );
+//       const isSameLayer = gleisRefs.every(
+//         (r, i) => i !== 0 && r.layerId === gleisRefs[0].layerId
+//       );
+
+//       if (isSameLayer && !isSameType) {
+//         scc.push(gleisRefs[0].p);
+//       }
+
+//       // if (gleisRefs.length >= 2) {
+//       //   // same layer, same type
+//       //   // is endpoint (1 in layer), different layer, same type
+//       //   scc.push(gleisRefs[0].p);
+//       //   for (const gleisRef of gleisRefs) {
+//       //   }
+//       // }
+//     }
+
+//     return scc;
+//   });
+// }
+
+export const slopesSelected = derived(
+  [gleisPlannedSelected],
+  ([gleisPlanned]) => {
+    return gleisPlanned
+      .filter((gleis) => !!gleis.slope)
+      .map((gleis) => {
+        const slope = gleis.slope;
+        return {
+          id: `slope-${gleis.id}`,
+          ...slope,
+          direction: slope.percentage < 0 ? 'down' : 'up',
+          endElevation:
+            slope.startElevation + (slope.percentage / 100) * length,
+          points: [
+            gleis.points[slope.pointsStartIndex],
+            gleis.points[slope.pointsEndIndex],
+          ],
+        };
+      });
+  }
+);

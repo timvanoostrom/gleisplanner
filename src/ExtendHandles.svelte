@@ -56,7 +56,8 @@
   />
 {/if}
 <Handle {point} on:connect={(event) => connect(event, point)} />
-{#if extensionPointsActive}<Handle
+{#if extensionPointsActive}
+  <Handle
     point={extensionPoint2}
     on:connect={(event) => connect(event, extensionPoint2)}
   />

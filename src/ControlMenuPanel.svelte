@@ -46,9 +46,11 @@
           {title}
         {/if}
       </h4>
-      <div class="header-right">
-        <slot name="header-right" />
-      </div>
+      {#if !isMinimized}
+        <div class="header-right">
+          <slot name="header-right" />
+        </div>
+      {/if}
     </header>
   {/if}
   {#if !isMinimized}

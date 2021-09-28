@@ -4,6 +4,8 @@
   import Button from './Button.svelte';
   import { GLEISPLAN_NAME_DEFAULT } from './config/constants';
   import ControlMenuPanel from './ControlMenuPanel.svelte';
+  import { downloadSvg } from './helpers/svg';
+  import { initializers } from './store/appConfig';
   import {
     createNewGleisPlan,
     deleteGleisPlan,
@@ -51,13 +53,16 @@
   $: gleisPlanSavedActive = $gleisPlanSaved[$gleisPlanSavedId];
 
   onMount(() => {
-    if (gleisPlanSavedActive === undefined) {
-      fetch(`/${base}/plans/${GLEISPLAN_NAME_DEFAULT}`)
-        .then((response) => response.json())
-        .then((gleisplan) => {
-          importSavedConfig(gleisplan);
-        });
-    }
+    Promise.all(initializers).then(() => {
+      if (gleisPlanSavedActive === undefined) {
+        console.info('Created default plan');
+        fetch(`/${base}/plans/${GLEISPLAN_NAME_DEFAULT}`)
+          .then((response) => response.json())
+          .then((gleisplan) => {
+            importSavedConfig(gleisplan);
+          });
+      }
+    });
   });
 </script>
 
@@ -118,7 +123,7 @@
         downloadGleisPlan(gleisPlanSavedActive.name);
       }}
     >
-      download
+      download to disk
     </Button>
   {/if}
   <Button className="ImportButton">
@@ -146,6 +151,11 @@
     </span>
   </Button>
   <Button className="NewButton" on:click={() => newPlan()}>New</Button>
+  <Button
+    on:click={() => {
+      downloadSvg(document.querySelector('svg'), gleisPlanSavedActive.name);
+    }}>download svg</Button
+  >
 </ControlMenuPanel>
 
 <style>

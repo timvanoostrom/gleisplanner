@@ -1,5 +1,5 @@
-import type { ProtoGleis, ProtoGleisSegment } from '../../types';
-import { Direction, TrackLib } from '../../types';
+import type { ProtoGleis, ProtoGleisSegment, TrackLib } from '../../types';
+import { Direction  } from '../../types';
 
 export const trackLibrary: TrackLib = {
   id: 'piko-a',

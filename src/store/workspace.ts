@@ -4,13 +4,13 @@ import { activeTrackLibId, setActiveTrackLibId } from '../config/trackLib';
 import { downloadJSON, generateID } from '../helpers/app';
 import type {
   Dimensions,
-  EditMode,
   GleisPlanSaved,
   Guide,
   Guides,
   Layer,
   Point,
   SavedConfig,
+  Slopes,
 } from '../types';
 import { appConfig, appConfigValue, APP_CONFIG_DEFAULT, db } from './appConfig';
 import { gleisPlannedDB } from './gleis';
@@ -196,25 +196,32 @@ export const isDragTranslateActive = writable(true);
 export const isConnectionSwitchActive = writable(false);
 
 export function svgCoords(event, element: SVGGeometryElement | SVGSVGElement) {
-  const ctm = element.getScreenCTM();
-  const point = event.target.ownerSVGElement.createSVGPoint();
+  if (event?.target?.ownerSVGElement) {
+    const ctm = element.getScreenCTM();
+    const point = event.target.ownerSVGElement.createSVGPoint();
 
-  point.x = event.clientX;
-  point.y = event.clientY;
+    point.x = event.clientX;
+    point.y = event.clientY;
 
-  return point.matrixTransform(ctm.inverse());
+    return point.matrixTransform(ctm.inverse());
+  }
+  return null;
 }
 
 export const sidebarState = appConfigValue('sidebarState');
-export const editMode = writable<EditMode>('gleis');
 export const guides = db<Guides>('guides', []);
+export const slopes = db<Slopes>('slopes', {});
+export const [measureToolEnabled, setMeasureToolEnabled] =
+  appConfigValue<boolean>('measureToolEnabled');
+
+export const slopesCalculated = derived(slopes, (slopes) =>
+  Object.values(slopes)
+);
 
 // window.cleanGuides = () => {
 //   const layers = get(layersById);
 //   guides.update((guides) => {
-//     return guides.filter(
-//       (guide) => !!guide.points?.length && !!layers[guide.layerId]
-//     );
+//     return [];
 //   });
 // };
 // window.assignGuides = () => {
@@ -236,17 +243,12 @@ export const guidesInLayer = derived(
   }
 );
 
-export function createGuide(
-  layerId: Layer['id'],
-  points: Point[],
-  isShape: boolean = false
-) {
+export function createGuide(layerId: Layer['id'], points: Point[]) {
   const newGuide = {
     id: generateID(),
     label: '',
     points,
     layerId,
-    isShape,
   };
   guides.update((guides) => {
     return [...guides, newGuide];

@@ -23,7 +23,7 @@
     layersById,
     updateLayer,
   } from './store/layerControl';
-  import { editMode } from './store/workspace';
+
   import type { GleisPropsPlanned, Layer } from './types';
 
   let deleteDialogLayerId: Layer['id'] = '';
@@ -92,10 +92,7 @@
 
   function onKeydownRouter(event) {
     switch (true) {
-      case $editMode === 'gleis' &&
-        !!$gleisIdsActive.length &&
-        event.key === 'g' &&
-        event.metaKey:
+      case !!$gleisIdsActive.length && event.key === 'g' && event.metaKey:
         event.preventDefault();
         isAddToLayerDialogActive = true;
         break;
@@ -223,7 +220,7 @@
           addLayer();
         }}
       >
-        +
+        Add
       </Button>
     {/if}
     {#if mergeLayerIds.length}

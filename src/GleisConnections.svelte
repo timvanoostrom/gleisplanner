@@ -11,10 +11,11 @@
     pointConnections,
     protoGleisActive,
   } from './store/gleis';
+
   import type { GleisPropsPlanned, Point, ProtoSegmentFlex } from './types';
 
   export let gleisPlanned: GleisPropsPlanned[] = [];
-  export let quickConnectEnabled: boolean = false;
+  export let selectionMode: boolean = false;
 
   function connectGleisToPoint(
     event: CustomEvent | MouseEvent,
@@ -41,35 +42,47 @@
     return gleisProps.points.filter((p) => {
       const connectedIDs = $pointConnections[getCoordString(p)]?.filter(
         (id) => {
-          return $gleisPlannedBbyId[id]?.layerId === gleisProps.layerId;
+          return (
+            $gleisPlannedBbyId[id]?.layerId === gleisProps.layerId &&
+            id !== gleisProps.id
+          );
         }
       );
       return (
         p.type === 'c1' ||
-        (p.type === 'c2' && (!connectedIDs || connectedIDs.length <= 1))
+        (p.type === 'c2' &&
+          (!connectedIDs ||
+            connectedIDs.length <= 1 ||
+            connectedIDs.some((id) => $gleisIdsActive.includes(id)))) // endpoint
       );
     });
   }
 </script>
 
-{#each gleisPlanned as gleisProps (gleisProps.id)}
-  {#if $gleisIdsActive.includes(gleisProps.id)}
-    {#each gleisPoints(gleisProps) as point (point)}
-      <ExtendHandles
-        {point}
-        on:connect={(event) => connectGleisToPoint(event, event.detail)}
-      />
-    {/each}
-  {:else}
-    {#each gleisPoints(gleisProps) as point (point)}
-      <Handle
-        {point}
-        on:connect={(event) => connectGleisToPoint(event, event.detail)}
-      />
-    {/each}
+<g class="GleisConnections">
+  {#each gleisPlanned as gleisProps (gleisProps.id)}
+    {#if $gleisIdsActive.includes(gleisProps.id)}
+      {#each gleisPoints(gleisProps) as point (point)}
+        <ExtendHandles
+          {point}
+          on:connect={(event) => connectGleisToPoint(event, event.detail)}
+        />
+      {/each}
+    {:else}
+      {#each gleisPoints(gleisProps) as point (point)}
+        <Handle
+          {point}
+          on:connect={(event) => connectGleisToPoint(event, event.detail)}
+        />
+      {/each}
+    {/if}
+  {/each}
+  {#if selectionMode}
+    <GleisQuickConnect onConnect={connectGleisToPoint} />
   {/if}
-{/each}
+</g>
 
-{#if quickConnectEnabled}
-  <GleisQuickConnect onConnect={connectGleisToPoint} />
-{/if}
+<style>
+  .GleisConnections {
+  }
+</style>

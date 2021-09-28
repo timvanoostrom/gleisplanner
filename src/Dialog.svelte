@@ -1,11 +1,12 @@
 <script lang="ts">
   import dialogPolyfill from 'dialog-polyfill';
   import { afterUpdate, createEventDispatcher, onMount } from 'svelte';
+  import Portal from './Portal.svelte';
 
   export let id: string;
   export let isOpen: boolean = false;
   export let modal: boolean = true;
-  export let height: string = '400px';
+  export let height: string = 'auto';
   export let width: string = '260px';
 
   let dialog: HTMLDialogElement;
@@ -34,15 +35,17 @@
   };
 </script>
 
-<dialog
-  class:fixed={!hasNativeDialogSupport}
-  bind:this={dialog}
-  {id}
-  on:close={(event) => onClose(event)}
-  style={`height: ${height};width: ${width}`}
->
-  <slot />
-</dialog>
+<Portal>
+  <dialog
+    class:fixed={!hasNativeDialogSupport}
+    bind:this={dialog}
+    {id}
+    on:close={(event) => onClose(event)}
+    style={`height: ${height};width: ${width}`}
+  >
+    <slot />
+  </dialog>
+</Portal>
 
 <style>
   dialog {

@@ -1,8 +1,10 @@
 <script lang="ts">
+  import Button from './Button.svelte';
   import { trackLibByArtNr } from './config/trackLib';
   import ConnectionPane from './ConnectionPane.svelte';
+  import ControlMenuPanel from './ControlMenuPanel.svelte';
   import DimensionsControl from './DimensionsControl.svelte';
-  import EditMode from './EditMode.svelte';
+
   import FlexGleisModeller from './FlexGleisModeller.svelte';
   import Gleis from './Gleis.svelte';
   import GleisConnections from './GleisConnections.svelte';
@@ -11,11 +13,14 @@
   import GridControl from './GridControl.svelte';
   import Guides from './Guides.svelte';
   import { connectFlexPointStart } from './helpers/flex';
+  import { downloadSvg } from './helpers/svg';
   import LayerControl from './LayerControl.svelte';
   import Plane from './Plane.svelte';
   import SavesControl from './SavesControl.svelte';
   import ScaleControl from './ScaleControl.svelte';
   import SelectionTools from './SelectionTools.svelte';
+  import ShortCurcuitConnections from './ShortCurcuitConnections.svelte';
+  import MeasureTool from './MeasureTool.svelte';
   import SideMenu from './SideMenu.svelte';
   import { initializers } from './store/appConfig';
   import {
@@ -23,8 +28,16 @@
     gleisPlannedUnselectedByLayerId,
     singleFlexActive,
   } from './store/gleis';
-  import { editMode } from './store/workspace';
+
   import TrackLibControl from './TrackLibControl.svelte';
+  import {
+    measureToolEnabled,
+    setMeasureToolEnabled,
+    slopes,
+    slopesCalculated,
+  } from './store/workspace';
+  import SlopeConfig from './SlopeConfig.svelte';
+  import SlopeInfo from './SlopeInfo.svelte';
 
   let isLoading = true;
 
@@ -33,14 +46,29 @@
   Promise.all(initializers).then(() => (isLoading = false));
 </script>
 
-<main class="App" class:isLoading data-editmode={$editMode}>
+<main class="App" class:isLoading>
   <header class="Header">
     <h1 class="Logo">Gleis planner</h1>
     <TrackLibControl />
     <div class="PanelGroup">
       <GleisStats />
       <ScaleControl />
-      <EditMode />
+      <ControlMenuPanel title="Shapes & Symbols">
+        <Button>Guide</Button>
+        <Button>Bridge</Button>
+        <Button>Tunnel</Button>
+        <Button>Booster</Button>
+        <Button>GBM16</Button>
+        <Button>OneControl</Button>
+      </ControlMenuPanel>
+      <ControlMenuPanel title="Tools">
+        <Button
+          isActive={$measureToolEnabled}
+          on:click={() => setMeasureToolEnabled(!$measureToolEnabled)}
+        >
+          Measure line
+        </Button>
+      </ControlMenuPanel>
     </div>
   </header>
 
@@ -64,13 +92,18 @@
         </SelectionTools>
         <GleisConnections
           gleisPlanned={$gleisPlannedSelected}
-          quickConnectEnabled={true}
+          selectionMode={true}
         />
       {/if}
       {#if $connectFlexPointStart}
         <FlexGleisModeller />
       {/if}
       <Guides />
+      <ShortCurcuitConnections />
+      {#each $slopesCalculated as slope}
+        <SlopeInfo {slope} />
+      {/each}
+      <MeasureTool />
     </Plane>
   </div>
 
@@ -81,6 +114,7 @@
     <GridControl />
     <DimensionsControl />
     <ConnectionPane />
+    <SlopeConfig />
   </SideMenu>
 </main>
 

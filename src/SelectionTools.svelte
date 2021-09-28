@@ -6,6 +6,7 @@
   import { applyMatrixToPoint } from './helpers/svg';
   import RotateGleis from './RotateGleis.svelte';
   import {
+    gleisIdsActive,
     setGleisIdsActive,
     updateGleis,
     updateGleisPlanned,
@@ -19,7 +20,6 @@
   export let gleisSelected: Readable<GleisPropsPlanned[]>;
 
   let selectionArea: Partial<DOMRect>;
-  let addToSelection = false;
 
   gleisSelected.subscribe(async () => {
     // Wait here because latest transformation is not applied otherwise.
@@ -80,16 +80,7 @@
     updateGleis(gleisUpdates);
   }
 
-  function onKeyupRouter(event) {
-    if (!event.shiftKey) {
-      addToSelection = false;
-    }
-  }
-
   function onKeydownRouter(event) {
-    if (event.shiftKey) {
-      addToSelection = true;
-    }
     switch (event.key) {
       case 'd':
         if (event.metaKey) {
@@ -120,11 +111,45 @@
           setGleisIdsActive(idsSelected);
         }
         break;
+      case 'ArrowUp':
+        if (event.metaKey) {
+          event.preventDefault();
+          updateGleisPlanned((gleisPlanned) => {
+            const shiftedGleis = Object.entries(gleisPlanned).filter(([id]) => {
+              return !$gleisIdsActive.includes(id);
+            });
+
+            return {
+              ...Object.fromEntries(shiftedGleis),
+              ...Object.fromEntries(
+                $gleisSelected.map((gleis) => [gleis.id, gleis])
+              ),
+            };
+          });
+        }
+        break;
+      case 'ArrowDown':
+        if (event.metaKey) {
+          event.preventDefault();
+          updateGleisPlanned((gleisPlanned) => {
+            const shiftedGleis = Object.entries(gleisPlanned).filter(([id]) => {
+              return !$gleisIdsActive.includes(id);
+            });
+
+            return {
+              ...Object.fromEntries(
+                $gleisSelected.map((gleis) => [gleis.id, gleis])
+              ),
+              ...Object.fromEntries(shiftedGleis),
+            };
+          });
+        }
+        break;
     }
   }
 </script>
 
-<svelte:window on:keydown={onKeydownRouter} on:keyup={onKeyupRouter} />
+<svelte:window on:keydown={onKeydownRouter} />
 
 <g id="selected-gleis">
   <RotateGleis
