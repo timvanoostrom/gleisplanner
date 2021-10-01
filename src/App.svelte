@@ -34,6 +34,7 @@
     measureToolEnabled,
     setMeasureToolEnabled,
     slopes,
+    slopesByLayerId,
     slopesCalculated,
   } from './store/workspace';
   import SlopeConfig from './SlopeConfig.svelte';
@@ -78,6 +79,11 @@
         {#each gleisPlanned as gleisProps (gleisProps.id)}
           <Gleis {gleisProps} proto={tracksByArtNr[gleisProps.artnr]} />
         {/each}
+        {#if $slopesByLayerId[layerId]}
+          {#each $slopesByLayerId[layerId] as slope}
+            <SlopeInfo {slope} />
+          {/each}
+        {/if}
         <GleisConnections {gleisPlanned} />
       {/each}
       {#if $gleisPlannedSelected.length}
@@ -100,9 +106,6 @@
       {/if}
       <Guides />
       <ShortCurcuitConnections />
-      {#each $slopesCalculated as slope}
-        <SlopeInfo {slope} />
-      {/each}
       <MeasureTool />
     </Plane>
   </div>

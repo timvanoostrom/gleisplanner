@@ -10,10 +10,11 @@ import type {
   Layer,
   Point,
   SavedConfig,
+  SlopeConfig,
   Slopes,
 } from '../types';
 import { appConfig, appConfigValue, APP_CONFIG_DEFAULT, db } from './appConfig';
-import { gleisPlannedDB } from './gleis';
+import { gleisPlanned, gleisPlannedDB } from './gleis';
 import {
   INITIAL_STATE as LAYERS_INITIAL_STATE,
   layerControl,
@@ -216,6 +217,25 @@ export const [measureToolEnabled, setMeasureToolEnabled] =
 
 export const slopesCalculated = derived(slopes, (slopes) =>
   Object.values(slopes)
+);
+
+export const slopesByLayerId = derived(
+  [slopesCalculated, gleisPlanned],
+  ([slopesCalculated, gleisPlanned]) => {
+    const byLayerId: Record<Layer['id'], SlopeConfig[]> = {};
+    for (const slope of Object.values(slopesCalculated)) {
+      const gleis = gleisPlanned[slope.gleisIds[0]];
+      if (gleis) {
+        const id = gleis.layerId;
+        if (!byLayerId[id]) {
+          byLayerId[id] = [];
+        }
+        byLayerId[id].push(slope);
+      }
+    }
+    console.log('byLayerId', byLayerId);
+    return byLayerId;
+  }
 );
 
 // window.cleanGuides = () => {
