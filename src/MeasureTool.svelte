@@ -1,11 +1,7 @@
 <script lang="ts">
-  import {
-    measureToolEnabled,
-    setMeasureToolEnabled,
-    svgCoords,
-  } from './store/workspace';
   import throttle from 'lodash.throttle';
   import { getMidPoint, lineDistance } from './helpers/geometry';
+  import { dimensions, measureToolEnabled, svgCoords } from './store/workspace';
 
   let measureToolRef;
 
@@ -22,8 +18,7 @@
         p1 = null;
         p2 = null;
         p2Move = null;
-      }
-      if (!p1) {
+      } else if (!p1) {
         const point = svgCoords(event, measureToolRef);
         p1 = point;
       } else if (p1 && !p2) {
@@ -53,24 +48,36 @@
 </script>
 
 <svelte:window on:click={(event) => setPoint(event)} on:pointermove={move} />
-
-<g bind:this={measureToolRef}>
-  {#if p1 && p2Active}
-    <circle r="4" class="MeasurePoint" cx={p1.x} cy={p1.y} />
-    <line
-      x1={p1.x}
-      y1={p1.y}
-      x2={p2Active.x}
-      y2={p2Active.y}
-      class="MeasureLine"
-    />
-    <circle r="4" class="MeasurePoint" cx={center.x} cy={center.y} />
-    <text class="MeasureLabel" x={center.x} y={center.y}>{length}cm</text>
-    <circle r="4" class="MeasurePoint" cx={p2Active.x} cy={p2Active.y} />
-  {/if}
-</g>
+{#if $measureToolEnabled}
+  <rect
+    class="MeasurePlane"
+    x={-$dimensions.width / 2}
+    y={-$dimensions.height / 2}
+    width={$dimensions.width}
+    height={$dimensions.height}
+  />
+  <g bind:this={measureToolRef}>
+    {#if p1 && p2Active}
+      <circle r="4" class="MeasurePoint" cx={p1.x} cy={p1.y} />
+      <line
+        x1={p1.x}
+        y1={p1.y}
+        x2={p2Active.x}
+        y2={p2Active.y}
+        class="MeasureLine"
+      />
+      <circle r="4" class="MeasurePoint" cx={center.x} cy={center.y} />
+      <text class="MeasureLabel" x={center.x} y={center.y}>{length}cm</text>
+      <circle r="4" class="MeasurePoint" cx={p2Active.x} cy={p2Active.y} />
+    {/if}
+  </g>
+{/if}
 
 <style>
+  .MeasurePlane {
+    fill: #fff;
+    fill-opacity: 0;
+  }
   .MeasurePoint {
     fill: red;
   }
