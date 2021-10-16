@@ -56,8 +56,10 @@ export const [gleisIdsActive, setGleisIdsActive] =
   appConfigValue<string[]>('gleisIdsActive');
 
 export function setGleisIdActive(id: string, isMulti: boolean = false) {
+  console.log('setactive', id, isMulti);
   setGleisIdsActive((ids) => {
     if (ids.includes(id)) {
+      console.log('rm', id);
       return ids.filter((sid) => sid !== id);
     }
     return isMulti ? [...ids, id] : [id];
@@ -174,6 +176,31 @@ export const gleisPlannedUnselectedByLayerId = derived(
     for (const gleis of Object.values(gleisPlanned).filter(
       (gleis: GleisPropsPlanned): gleis is GleisPropsPlanned =>
         !gleisIdsActive.includes(gleis.id)
+    )) {
+      if (!layers[gleis.layerId]) {
+        layers[gleis.layerId] = [];
+      }
+      layers[gleis.layerId].push(gleis);
+    }
+    const layerIds = layerControl.layers.map((layer) => layer.id).reverse();
+    const layerz: Record<string, GleisPropsPlanned[]> = Object.fromEntries(
+      layerIds
+        .map((id) => {
+          return id in layers ? [id, layers[id]] : null;
+        })
+        .filter((keyval) => !!keyval)
+    );
+    return layerz;
+  }
+);
+
+export const gleisPlannedSelectedByLayerId = derived(
+  [gleisIdsActive, gleisPlanned, layerControl],
+  ([gleisIdsActive, gleisPlanned, layerControl]) => {
+    const layers: Record<string, GleisPropsPlanned[]> = {};
+    for (const gleis of Object.values(gleisPlanned).filter(
+      (gleis: GleisPropsPlanned): gleis is GleisPropsPlanned =>
+        gleisIdsActive.includes(gleis.id)
     )) {
       if (!layers[gleis.layerId]) {
         layers[gleis.layerId] = [];
@@ -630,37 +657,41 @@ export function getRootPointOrigin(x: number, y: number): Point {
 }
 
 export function shortCircuitConnections() {
-  // points that are in same layer and same type
-  // points that are not in same layer but same type and endpoints
-  return derived([gleisPlanned], ([gleisPlanned]) => {
-    const scc = [];
-    const c = {};
+  // points that are in same layer and same type (done)
+  // points that are not in same layer but same type and endpoints (todo)
+  return derived(
+    [gleisPlanned, gleisIdsActive],
+    ([gleisPlanned, gleisIdsActive]) => {
+      const scc = [];
+      const shortCircuitCoords = {};
 
-    for (const gleis of Object.values<GleisPropsPlanned>(gleisPlanned)) {
-      for (const p of gleis.points) {
-        if (p.type === 'c1' || p.type === 'c2') {
-          const coordString = getCoordString(p);
-          if (!c[coordString]) {
-            c[coordString] = [{ p, id: gleis.id }];
-          } else if (p.type === c[coordString][0].p.type) {
-            c[coordString].push({ p, id: gleis.id });
+      for (const gleis of Object.values<GleisPropsPlanned>(gleisPlanned)) {
+        for (const p of gleis.points) {
+          if (p.type === 'c1' || p.type === 'c2') {
+            const coordString = `${gleis.layerId}-${getCoordString(p)}`;
+            if (!shortCircuitCoords[coordString]) {
+              shortCircuitCoords[coordString] = [{ p, id: gleis.id }];
+            } else if (p.type === shortCircuitCoords[coordString][0].p.type) {
+              shortCircuitCoords[coordString].push({ p, id: gleis.id });
 
-            const isSameLayer =
-              gleis.layerId === gleisPlanned[c[coordString][0].id].layerId;
+              const pointsAtCoord = shortCircuitCoords[coordString];
+              const isSameLayer =
+                gleis.layerId === gleisPlanned[pointsAtCoord[0].id].layerId;
 
-            // const isLayerConnection = !isSameLayer &&
-            // the opposite point of connecting gleis also has connection
+              // const isLayerConnection = !isSameLayer &&
+              // the opposite point of connecting gleis also has connection
 
-            if (isSameLayer) {
-              scc.push(p);
+              if (isSameLayer) {
+                scc.push(p);
+              }
             }
           }
         }
       }
-    }
 
-    return scc;
-  });
+      return scc;
+    }
+  );
 }
 
 // export function shortCircuitConnections() {
@@ -720,8 +751,7 @@ export const slopesSelected = derived(
           id: `slope-${gleis.id}`,
           ...slope,
           direction: slope.percentage < 0 ? 'down' : 'up',
-          endElevation:
-            slope.startElevation + (slope.percentage / 100) * length,
+          elevation: slope.startElevation + (slope.percentage / 100) * length,
           points: [
             gleis.points[slope.pointsStartIndex],
             gleis.points[slope.pointsEndIndex],

@@ -5,6 +5,7 @@
 
   export let gleisProps: GleisPropsPlanned;
   export let proto: ProtoGleis;
+  export let disabled: boolean = false;
 
   $: isActive = $gleisIdsActive.includes(gleisProps.id);
   $: gleisLayerPatternId = $layersById[gleisProps.layerId]?.patternId || '';
@@ -16,8 +17,10 @@
   class="Gleis"
   class:isActive
   on:click={(event) => {
-    event.stopPropagation();
-    setGleisIdActive(gleisProps.id, event.shiftKey);
+    if (!disabled) {
+      event.stopPropagation();
+      setGleisIdActive(gleisProps.id, event.shiftKey);
+    }
   }}
   style={`--gleis-fill-color:${gleisFillColor};${
     gleisLayerPatternId

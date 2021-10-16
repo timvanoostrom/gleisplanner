@@ -10,6 +10,7 @@
     gleisPlanned,
     gleisPlannedSelected,
     setGleisIdsActive,
+    updateGleisPlanned,
   } from './store/gleis';
   import { slopes, slopesCalculated } from './store/workspace';
   import type {
@@ -23,8 +24,12 @@
 
   let newSlopeTitle = '';
   let newSlopePercentage = 0;
+  let newSlopeStartElevation = 0;
   let editDialogSlopeId: SlopeConfig['id'] = '';
   let deleteDialogSlopeId: SlopeConfig['id'] = '';
+  let slopeIdSelected: SlopeConfig['id'] = '';
+
+  let editSlope = null;
 
   function gleisIdsInSameLayer(ids: Array<GleisPropsPlanned['id']>) {
     let prev;
@@ -47,7 +52,7 @@
   }
 
   function calcSlopeProperties(slopeBase: SlopeConfigBase): SlopeConfig {
-    let startElevation = 0;
+    let startElevation = slopeBase.startElevation || 0;
     let totalLength = 0;
 
     // TODO: sort from...
@@ -69,7 +74,7 @@
       ...slopeBase,
       totalLength,
       startElevation,
-      endElevation: Math.round((slopeBase.percentage / 100) * totalLength),
+      elevation: Math.round((slopeBase.percentage / 100) * totalLength),
     };
   }
 
@@ -130,18 +135,40 @@
   }
 
   function reverseSlope(id: SlopeConfig['id']) {
-    slopes.update((slopes) => {
-      const slope = slopes[id];
-      const gleisIds = [...slope.gleisIds];
-      gleisIds.reverse();
-      return {
-        ...slopes,
-        [id]: {
-          ...slope,
-          gleisIds,
-        },
-      };
-    });
+    const slope = get(slopes)[id];
+
+    if (slope.gleisIds.length > 1) {
+      slopes.update((slopes) => {
+        const gleisIds = [...slope.gleisIds];
+        gleisIds.reverse();
+        return {
+          ...slopes,
+          [id]: {
+            ...slope,
+            gleisIds,
+          },
+        };
+      });
+    } else {
+      updateGleisPlanned((gleisPlanned) => {
+        const [id] = slope.gleisIds;
+        const gleis = gleisPlanned[id];
+        return {
+          ...gleisPlanned,
+          [id]: {
+            ...gleis,
+            pathSegments: gleis.pathSegments.map((pathSegment) => {
+              const path = new SVGPathCommander(pathSegment.d);
+              path.reverse();
+              return {
+                ...pathSegment,
+                d: path.toString(),
+              };
+            }),
+          },
+        };
+      });
+    }
   }
 
   //  slopes.update((slopes) => {
@@ -175,16 +202,21 @@
   </div>
   <ul class="List">
     {#each $slopesCalculated as config}
-      <li class="ListItem">
+      <li
+        class="ListItem"
+        class:isSlopeSelected={config.id === slopeIdSelected}
+      >
         <div class="ListItem-header">
           <span
             role="button"
             class="LayerName"
             on:click={() => setGleisIdsActive(config.gleisIds || [])}
             on:dblclick={(event) => {
-              editDialogSlopeId = config.id;
-              newSlopeTitle = config.title;
-              newSlopePercentage = config.percentage;
+              editSlope = { ...config };
+              // editDialogSlopeId = config.id;
+              // newSlopeTitle = config.title;
+              // newSlopePercentage = config.percentage;
+              // newSlopeStartElevation = config.startElevation || 0;
             }}
           >
             <h4>{config.title}</h4>
@@ -194,11 +226,12 @@
               <span><b>Length</b> {config.totalLength}cm</span>
               <span
                 ><b>Elevation</b>
-                {config.startElevation}cm - {config.endElevation}cm</span
+                {config.startElevation}cm - {config.startElevation +
+                  config.elevation}cm</span
               >
               <span
                 ><b>Total elevation</b>
-                {config.endElevation - config.startElevation}cm</span
+                {config.elevation}cm</span
               >
             </p>
           </span>
@@ -221,35 +254,35 @@
   </ul>
 </ControlMenuPanel>
 
-{#if editDialogSlopeId}
+{#if editSlope?.id}
   <Dialog
     id="EditDialogLayer"
     isOpen={true}
     on:close={() => {
-      editDialogSlopeId = '';
+      editSlope = null;
     }}
   >
     <div class="DialogContent">
-      <label>Name <input bind:value={newSlopeTitle} /></label>
+      <label><span>Name</span> <input bind:value={editSlope.title} /></label>
       <label
-        >Slope <input
+        ><span>Slope</span>
+        <input
           type="number"
           step=".1"
           min="0"
           max="5"
-          bind:value={newSlopePercentage}
+          bind:value={editSlope.percentage}
         /></label
       >
+      <label>
+        <span>Start elevation</span>
+        <input type="number" bind:value={editSlope.startElevation} />
+      </label>
       <footer class="DialogFooter">
         <Button
           on:click={() => {
-            updateSlope(editDialogSlopeId, {
-              title: newSlopeTitle,
-              percentage: newSlopePercentage,
-            });
-            // newSlopeTitle = '';
-            editDialogSlopeId = '';
-            // newSlopePercentage = 0;
+            updateSlope(editSlope.id, editSlope);
+            editSlope = null;
           }}
         >
           Ok
@@ -325,9 +358,12 @@
     margin-top: 5px;
     border-top: 1px solid #eee;
   }
-
   .DialogContent label {
-    display: block;
+    display: flex;
     margin-bottom: 5px;
+    justify-content: space-between;
+  }
+  .isSlopeSelected {
+    background-color: thistle;
   }
 </style>

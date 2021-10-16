@@ -14,6 +14,7 @@ export interface AppConfig {
   activeTrackLibId: string;
   selectionToolsEnabled: boolean;
   measureToolEnabled: boolean;
+  guidesToolEnabled: boolean;
 }
 
 export type GleisType =
@@ -96,7 +97,7 @@ export interface SlopeConfigBase {
 }
 export interface SlopeConfig extends SlopeConfigBase {
   totalLength: number;
-  endElevation: number;
+  elevation: number;
 }
 
 export type Slopes = Record<string, SlopeConfig>;

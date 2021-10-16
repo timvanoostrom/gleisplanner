@@ -7,6 +7,7 @@
   export let points: Point[] = [];
   export let isSelected: boolean = false;
   export let isTemp: boolean = false;
+  export let pointsSelected: Point[] = [];
 
   const dispatch = createEventDispatcher();
   let path;
@@ -36,9 +37,9 @@
     return pathLabels;
   }
 
-  function pathPointClick(event, point) {
+  function pathPointClick(event, point, shiftKey) {
     event.stopImmediatePropagation();
-    dispatch('pathPointClick', point);
+    dispatch('pathPointClick', { point, shiftKey });
   }
 
   $: pathLabels = generatePathLabels(points);
@@ -58,6 +59,7 @@
 
 <g on:click class="Guide" class:isSelected>
   {#if path}
+    <path d={pathString} class="GuidePathSelect" />
     <path d={pathString} class="GuidePath" />
   {/if}
   {#each points as point, index}
@@ -67,7 +69,8 @@
         cy={point.y}
         r="10"
         class="PathPoint"
-        on:click={(event) => pathPointClick(event, point)}
+        class:isSelected={pointsSelected.includes(point)}
+        on:click={(event) => pathPointClick(event, point, event.shiftKey)}
       />
     {/if}
   {/each}
@@ -86,20 +89,18 @@
 </g>
 
 <style>
-  .Guide.shape .GuidePath {
-    fill: #fff;
-  }
-  .Guide.shape.isSelected .GuidePath {
-    fill: red;
-  }
   .PathPoint {
     fill: #fff;
     fill-opacity: 1;
     stroke: #000;
   }
+
   .PathPoint:hover {
-    fill: red;
-    stroke-width: 10px;
+    stroke-width: 4px;
+    stroke: purple;
+  }
+  .PathPoint.isSelected {
+    stroke-width: 4px;
     stroke: red;
   }
 
@@ -110,18 +111,27 @@
     stroke-opacity: 1;
     cursor: pointer;
   }
+  .GuidePathSelect {
+    fill: none;
+    stroke: purple;
+    stroke-width: 20px;
+    stroke-opacity: 0;
+  }
+  .Guide:hover {
+    cursor: pointer;
+  }
+  .Guide:hover .GuidePathSelect {
+    stroke-opacity: 0.2;
+  }
+  .Guide.isSelected .GuidePathSelect {
+    stroke: red;
+    stroke-opacity: 0.2;
+  }
   .PathLabel {
     text-anchor: middle;
     font-size: 20px;
   }
   .PathLabelBg {
     fill: #fff;
-  }
-  .Guide.shape .GuidePath {
-    stroke-width: 0;
-  }
-  .Guide.shape .PathLabelBg,
-  .Guide.shape .PathLabel {
-    display: none;
   }
 </style>

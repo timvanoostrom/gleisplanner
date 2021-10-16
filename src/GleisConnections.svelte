@@ -1,6 +1,6 @@
 <script lang="ts">
   import ExtendHandles from './ExtendHandles.svelte';
-  import GleisQuickConnect from './GleisQuickConnect.svelte';
+  import GleisConnectKeyboardControl from './GleisConnectKeyboardControl.svelte';
   import Handle from './Handle.svelte';
   import { connectFlex, connectFlexPointStart } from './helpers/flex';
   import {
@@ -78,7 +78,7 @@
     {/if}
   {/each}
   {#if selectionMode}
-    <GleisQuickConnect onConnect={connectGleisToPoint} />
+    <GleisConnectKeyboardControl onConnect={connectGleisToPoint} />
   {/if}
 </g>
 

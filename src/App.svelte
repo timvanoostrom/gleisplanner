@@ -4,7 +4,6 @@
   import ConnectionPane from './ConnectionPane.svelte';
   import ControlMenuPanel from './ControlMenuPanel.svelte';
   import DimensionsControl from './DimensionsControl.svelte';
-
   import FlexGleisModeller from './FlexGleisModeller.svelte';
   import Gleis from './Gleis.svelte';
   import GleisConnections from './GleisConnections.svelte';
@@ -13,38 +12,54 @@
   import GridControl from './GridControl.svelte';
   import Guides from './Guides.svelte';
   import { connectFlexPointStart } from './helpers/flex';
-  import { downloadSvg } from './helpers/svg';
   import LayerControl from './LayerControl.svelte';
+  import MeasureTool from './MeasureTool.svelte';
   import Plane from './Plane.svelte';
+  import PlaneTools from './PlaneTools.svelte';
   import SavesControl from './SavesControl.svelte';
   import ScaleControl from './ScaleControl.svelte';
   import SelectionTools from './SelectionTools.svelte';
   import ShortCurcuitConnections from './ShortCurcuitConnections.svelte';
-  import MeasureTool from './MeasureTool.svelte';
   import SideMenu from './SideMenu.svelte';
+  import SlopeConfig from './SlopeConfig.svelte';
+  import SlopeInfo from './SlopeInfo.svelte';
   import { initializers } from './store/appConfig';
   import {
+    gleisIdsActive,
     gleisPlannedSelected,
+    gleisPlannedSelectedByLayerId,
     gleisPlannedUnselectedByLayerId,
     singleFlexActive,
   } from './store/gleis';
-
-  import TrackLibControl from './TrackLibControl.svelte';
   import {
     measureToolEnabled,
     setMeasureToolEnabled,
-    slopes,
+    guidesToolEnabled,
+    setGuidesToolEnabled,
     slopesByLayerId,
-    slopesCalculated,
   } from './store/workspace';
-  import SlopeConfig from './SlopeConfig.svelte';
-  import SlopeInfo from './SlopeInfo.svelte';
+  import TrackLibControl from './TrackLibControl.svelte';
 
   let isLoading = true;
 
   const tracksByArtNr = $trackLibByArtNr;
 
   Promise.all(initializers).then(() => (isLoading = false));
+
+  $: isGleisModeActive = !$measureToolEnabled && !$guidesToolEnabled;
+
+  function toggleTool(name: 'measure' | 'guides') {
+    switch (name) {
+      case 'measure':
+        setMeasureToolEnabled(!$measureToolEnabled);
+        setGuidesToolEnabled(false);
+        break;
+      case 'guides':
+        setGuidesToolEnabled(!$guidesToolEnabled);
+        setMeasureToolEnabled(false);
+        break;
+    }
+  }
 </script>
 
 <main class="App" class:isLoading>
@@ -65,9 +80,15 @@
       <ControlMenuPanel title="Tools">
         <Button
           isActive={$measureToolEnabled}
-          on:click={() => setMeasureToolEnabled(!$measureToolEnabled)}
+          on:click={() => toggleTool('measure')}
         >
           Measure line
+        </Button>
+        <Button
+          isActive={$guidesToolEnabled}
+          on:click={() => toggleTool('guides')}
+        >
+          Guides
         </Button>
       </ControlMenuPanel>
     </div>
@@ -79,11 +100,7 @@
         {#each gleisPlanned as gleisProps (gleisProps.id)}
           <Gleis {gleisProps} proto={tracksByArtNr[gleisProps.artnr]} />
         {/each}
-        {#if $slopesByLayerId[layerId]}
-          {#each $slopesByLayerId[layerId] as slope}
-            <SlopeInfo {slope} />
-          {/each}
-        {/if}
+
         <GleisConnections {gleisPlanned} />
       {/each}
       {#if $gleisPlannedSelected.length}
@@ -96,17 +113,30 @@
             {/if}
           {/each}
         </SelectionTools>
+        {#each Object.entries($gleisPlannedSelectedByLayerId) as [layerId, gleisPlanned] (layerId)}
+          {#if $slopesByLayerId[layerId]}
+            {#each $slopesByLayerId[layerId] as slope}
+              {#if slope.gleisIds.some((id) => $gleisIdsActive.includes(id))}
+                <SlopeInfo {slope} />
+              {/if}
+            {/each}
+          {/if}
+        {/each}
         <GleisConnections
           gleisPlanned={$gleisPlannedSelected}
-          selectionMode={true}
+          selectionMode={isGleisModeActive}
         />
       {/if}
+
       {#if $connectFlexPointStart}
         <FlexGleisModeller />
       {/if}
-      <Guides />
       <ShortCurcuitConnections />
+      <Guides />
       <MeasureTool />
+      {#if isGleisModeActive}
+        <PlaneTools />
+      {/if}
     </Plane>
   </div>
 

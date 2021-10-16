@@ -196,7 +196,10 @@ export const isRotationActive = writable(false);
 export const isDragTranslateActive = writable(true);
 export const isConnectionSwitchActive = writable(false);
 
-export function svgCoords(event, element: SVGGeometryElement | SVGSVGElement) {
+export function svgCoords(
+  event,
+  element: SVGGeometryElement | SVGSVGElement | SVGGElement
+) {
   if (event?.target?.ownerSVGElement) {
     const ctm = element.getScreenCTM();
     const point = event.target.ownerSVGElement.createSVGPoint();
@@ -214,6 +217,8 @@ export const guides = db<Guides>('guides', []);
 export const slopes = db<Slopes>('slopes', {});
 export const [measureToolEnabled, setMeasureToolEnabled] =
   appConfigValue<boolean>('measureToolEnabled');
+export const [guidesToolEnabled, setGuidesToolEnabled] =
+  appConfigValue<boolean>('guidesToolEnabled');
 
 export const slopesCalculated = derived(slopes, (slopes) =>
   Object.values(slopes)

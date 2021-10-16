@@ -2,7 +2,7 @@
   import SVGPathCommander from 'svg-path-commander';
   import { svgPathProperties } from 'svg-path-properties';
   import { range, round } from './helpers/app';
-  import { gleisPlanned } from './store/gleis';
+  import { getCoordString, gleisPlanned } from './store/gleis';
   import type { GleisPlanned, Point, SlopeConfig } from './types';
 
   const MARKER_DISTANCE = 100;
@@ -46,7 +46,7 @@
     const pathSegments = collectPathSegments($gleisPlanned, slope);
     let index = [];
     let i = 0;
-    const markersPrepare = [];
+    const segmentSources = [];
     const coords = new Map();
 
     if (pathSegments) {
@@ -54,18 +54,18 @@
         const path = new svgPathProperties(segment);
         const total = path.getTotalLength();
         const mid = path.getPointAtLength(total / 2);
-        const sp = path.getPointAtLength(0);
-        const se = path.getPointAtLength(total);
-        sp.x = round(sp.x, 2);
-        sp.y = round(sp.y, 2);
-        se.x = round(se.x, 2);
-        se.y = round(se.y, 2);
+        const point1 = path.getPointAtLength(0);
+        const point2 = path.getPointAtLength(total);
+        point1.x = round(point1.x, 2);
+        point1.y = round(point1.y, 2);
+        point2.x = round(point2.x, 2);
+        point2.y = round(point2.y, 2);
 
-        const s1 = `${sp.x},${sp.y}`;
-        const s2 = `${se.x},${se.y}`;
-        index.push([sp, se, i]);
+        const point1String = getCoordString(point1);
+        const point2String = getCoordString(point2);
+        index.push([point1, point2, i]);
 
-        markersPrepare.push({
+        segmentSources.push({
           path: segment,
           distance: 0,
           elevation: 0,
@@ -73,100 +73,122 @@
           x: mid.x,
           y: mid.y,
           n: i + 1,
-          sp,
-          se,
-          s1,
-          s2,
+          point1,
+          point2,
         });
 
-        if (!coords.get(s1)) {
-          coords.set(s1, [i]);
+        if (!coords.get(point1String)) {
+          coords.set(point1String, [i]);
         } else {
-          coords.get(s1).push(i);
+          coords.get(point1String).push(i);
         }
-        if (!coords.get(s2)) {
-          coords.set(s2, [i]);
+
+        if (!coords.get(point2String)) {
+          coords.set(point2String, [i]);
         } else {
-          coords.get(s2).push(i);
+          coords.get(point2String).push(i);
         }
+
         i++;
       }
 
-      const values = Array.from(coords.values());
-      const startIndex = values.findIndex((c) => c.length === 1);
+      console.dir(coords);
 
-      const re = [];
+      const ids = Array.from(coords.values());
+      const startAtIndex = ids.findIndex((ids) => ids.length === 1);
 
-      if (startIndex !== -1) {
-        re.push(values[startIndex][0]);
-        console.log(startIndex, values);
-        values.splice(startIndex, 1);
+      const idChain = [];
 
-        if (values.length > 1) {
-          while (values.length !== 0) {
-            // Get last ID
-            const last = re[re.length - 1];
-            // Find link matching the last ID
-            const nextIndex = values.findIndex((c) => c.includes(last));
+      if (startAtIndex !== -1) {
+        // First point
+        const startAtId = ids[startAtIndex][0];
+        idChain.push(startAtId);
+
+        // Remove id from available ids
+        ids.splice(startAtIndex, 1);
+
+        if (ids.length > 1) {
+          while (ids.length !== 0) {
+            // Get last ID in the chain
+            const lastId = idChain[idChain.length - 1];
+            // Find link matching the lastId ID
+            const connectingIdIndex = ids.findIndex((c) => c.includes(lastId));
             // Store Reference
-            if (nextIndex !== -1) {
-              const next = values[nextIndex];
-              // Remove Reference from values
-              values.splice(nextIndex, 1);
-              // Push Next ID onto chain
-              const isReversed = next[0] !== last || next.length !== 2;
-              re.push(next[isReversed ? 0 : 1]);
+            if (connectingIdIndex !== -1) {
+              const connectingIds = ids[connectingIdIndex];
+              // Remove Reference from ids
+              ids.splice(connectingIdIndex, 1);
+              // Push connectingIds ID onto chain
+              if (connectingIds.length > 1) {
+                const isReversed =
+                  connectingIds[0] !== lastId || connectingIds.length !== 2;
+                idChain.push(connectingIds[isReversed ? 0 : 1]);
+              }
             } else {
               // Broken chain
-              console.log('Broken chain', last, 'not in', values);
+              console.log('Broken chain', lastId, 'not in', ids);
               break;
             }
           }
         }
       }
 
-      let prevEnd;
-      markers = re.map((id, i) => {
-        const m = { ...markersPrepare[id], n: i + 1 };
-        const spath = new SVGPathCommander(m.path);
-        if (prevEnd && !isWithinRadius(prevEnd, m.sp, 10)) {
-          console.log('no klik!', id);
-          spath.reverse();
-          m.path = spath.toString();
-          prevEnd = m.sp;
-        } else {
-          prevEnd = m.se;
-        }
-        return m;
-      });
+      if (idChain.length) {
+        const startSegment = segmentSources[idChain[0]];
+        const sPoint1 = getCoordString(startSegment.point1);
 
-      path = markers.map((marker) => marker.path).join('');
-      const pathCombined = new svgPathProperties(path);
-      const count = Math.round((slope.totalLength * 10) / MARKER_DISTANCE);
-      const elev = slope.endElevation / count;
+        let prevEnd =
+          coords.get(sPoint1).length === 1
+            ? startSegment?.point1
+            : startSegment?.point2;
 
-      markers = range(0, count).map((n) => {
-        return {
-          ...pathCombined.getPointAtLength(MARKER_DISTANCE * n),
-          elevation: parseFloat(
-            String(slope.startElevation + n * elev)
-          ).toFixed(2),
-          distance: (MARKER_DISTANCE * n) / 10,
-        };
-      });
+        const segments = idChain.map((id, i) => {
+          const segment = segmentSources[id];
+          const spath = new SVGPathCommander(segment.path);
+
+          if (!isWithinRadius(prevEnd, segment.point1, 10)) {
+            console.log('reverse connection', id);
+            spath.reverse();
+            segment.path = spath.toString();
+            prevEnd = segment.point1;
+          } else {
+            console.log('proper connection', id);
+            prevEnd = segment.point2;
+          }
+          return segment;
+        });
+
+        path = segments.map((segment) => segment.path).join('');
+
+        const pathCombined = new svgPathProperties(path);
+        const count = Math.round((slope.totalLength * 10) / MARKER_DISTANCE);
+        const elev = slope.elevation / count;
+
+        markers = range(0, count)
+          .filter((n) => MARKER_DISTANCE * n <= slope.totalLength * 10)
+          .map((n) => {
+            return {
+              ...pathCombined.getPointAtLength(MARKER_DISTANCE * n),
+              elevation: parseFloat(
+                String(slope.startElevation + n * elev)
+              ).toFixed(2),
+              distance: (MARKER_DISTANCE * n) / 10,
+            };
+          });
+      }
     }
   }
 </script>
 
 <g>
-  {#each markers as marker}
+  {#each markers as marker, i}
     <g>
       <title>{marker.distance}cm - {marker.elevation}cm</title>
       <circle r="3" class="dot" cx={marker.x} cy={marker.y} />
+      <text class="SlopeSegmentLabel" x={marker.x} y={marker.y}>
+        {marker.elevation}
+      </text>
       <circle class="hit" r="15" cx={marker.x} cy={marker.y} />
-      <!-- <text class="SlopeSegmentLabel" x={marker.x} y={marker.y}
-          >{marker.n}</text
-        > -->
     </g>
   {/each}
   <!-- <path stroke="black" stroke-width="4" fill="none" d={path} /> -->
@@ -174,7 +196,8 @@
 
 <style>
   .SlopeSegmentLabel {
-    font-size: 20px;
+    font-size: 1.2em;
+    transform: translateX(5px);
   }
   .hit {
     fill: transparent;

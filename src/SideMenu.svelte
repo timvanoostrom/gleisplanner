@@ -26,6 +26,7 @@
     box-shadow: -10px 0 25px 5px rgba(0, 0, 0, 0.03);
     transition: transform 200ms ease-in-out;
     transform: translateX(calc(100% - 40px));
+    /* overflow-y: auto; */
   }
   .SideMenu :global(.ControlMenuPanel) {
     padding: 5px;
