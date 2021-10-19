@@ -102,6 +102,15 @@ export interface SlopeConfig extends SlopeConfigBase {
 
 export type Slopes = Record<string, SlopeConfig>;
 
+export interface GleisConfig {
+  bridge?: 1;
+  tunnel?: 1;
+  feedback?: 1;
+  block?: 1;
+  isolation?: 1;
+  'dc-connect'?: 1;
+}
+
 export interface GleisPropsPlanned {
   id: string;
   artnr: string;
@@ -111,6 +120,7 @@ export interface GleisPropsPlanned {
   variant?: string;
   slope?: SlopeConfig;
   pathSegments: PathSegmentProps[];
+  config?: GleisConfig;
 }
 
 export interface ProtoSegmentCurve {
@@ -197,6 +207,9 @@ export interface Guide {
   points: Point[];
   label: string;
   layerId: Layer['id'];
+  width?: number;
+  height?: number;
+  transform?: string;
 }
 export type Guides = Guide[];
 

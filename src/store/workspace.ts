@@ -215,10 +215,13 @@ export function svgCoords(
 export const sidebarState = appConfigValue('sidebarState');
 export const guides = db<Guides>('guides', []);
 export const slopes = db<Slopes>('slopes', {});
+
 export const [measureToolEnabled, setMeasureToolEnabled] =
   appConfigValue<boolean>('measureToolEnabled');
 export const [guidesToolEnabled, setGuidesToolEnabled] =
   appConfigValue<boolean>('guidesToolEnabled');
+
+export const guideShapesEnabled = writable(false);
 
 export const slopesCalculated = derived(slopes, (slopes) =>
   Object.values(slopes)
@@ -268,13 +271,34 @@ export const guidesInLayer = derived(
   }
 );
 
-export function createGuide(layerId: Layer['id'], points: Point[]) {
-  const newGuide = {
+interface CreateGuideProps {
+  layerId: Layer['id'];
+  points: Point[];
+  width?: number;
+  height?: number;
+  transform?: string;
+}
+
+export function createGuide({
+  layerId,
+  points,
+  width,
+  height,
+  transform,
+}: CreateGuideProps) {
+  const newGuide: Guide = {
     id: generateID(),
     label: '',
     points,
     layerId,
   };
+  if (width && height) {
+    newGuide.width = width;
+    newGuide.height = height;
+    if (transform) {
+      newGuide.transform = transform;
+    }
+  }
   guides.update((guides) => {
     return [...guides, newGuide];
   });

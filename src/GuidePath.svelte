@@ -67,7 +67,7 @@
       <circle
         cx={point.x}
         cy={point.y}
-        r="10"
+        r="6"
         class="PathPoint"
         class:isSelected={pointsSelected.includes(point)}
         on:click={(event) => pathPointClick(event, point, event.shiftKey)}
@@ -96,7 +96,7 @@
   }
 
   .PathPoint:hover {
-    stroke-width: 4px;
+    stroke-width: 20px;
     stroke: purple;
   }
   .PathPoint.isSelected {

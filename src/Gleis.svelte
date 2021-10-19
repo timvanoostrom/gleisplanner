@@ -1,4 +1,5 @@
 <script lang="ts">
+  import GleisBridge from './GleisBridge.svelte';
   import { gleisIdsActive, setGleisIdActive } from './store/gleis';
   import { layersById } from './store/layerControl';
   import type { GleisPropsPlanned, ProtoGleis } from './types';
@@ -14,7 +15,7 @@
 
 <g
   id={gleisProps.id}
-  class="Gleis"
+  class={`Gleis`}
   class:isActive
   on:click={(event) => {
     if (!disabled) {
@@ -30,6 +31,9 @@
 >
   <title>{proto.title} - {proto.artnr}</title>
   {#if gleisProps.pathSegments}
+    {#if gleisProps?.config?.bridge}
+      <GleisBridge {gleisProps} />
+    {/if}
     {#each gleisProps.pathSegments as pathSegment, index (pathSegment)}
       <path d={pathSegment.d.toString()} class={`spath ${pathSegment.type}`} />
     {/each}

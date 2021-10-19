@@ -14,7 +14,7 @@
   import { svgCoords } from './store/workspace';
   import type { Point, PointDimensions } from './types';
 
-  let dragDelta = { y: 0, x: 0 };
+  let dragAnchor = null;
   let dragSelectAnchor: Point = null;
   let dragSelectArea: PointDimensions = null;
 
@@ -62,6 +62,8 @@
 
   function endDragSelect(event) {
     event.stopPropagation();
+    event.stopImmediatePropagation();
+
     const isWithinSelection = (a: Point, b: PointDimensions) => {
       return (
         a.x >= b.x &&
@@ -97,17 +99,15 @@
     if (event.metaKey) {
       startDragSelect(event);
     }
+    dragAnchor = {
+      x: event.clientX,
+      y: event.clientY,
+    };
   };
 
   const doDrag = (event: MouseEvent) => {
     if (event.metaKey) {
       doDragSelect(event);
-    }
-  };
-
-  const endDrag = (event) => {
-    if (event.metaKey) {
-      endDragSelect(event);
     }
   };
 
@@ -179,8 +179,15 @@
   on:keydown={onKeyDownRouter}
   on:dblclick={(event) => onAddGleis(event)}
   on:pointerup={(event) => {
-    endDrag(event);
-    onDeselect(event);
+    if (event.metaKey) {
+      endDragSelect(event);
+    } else if (
+      Math.abs(dragAnchor?.x - event.clientX) < 2 &&
+      Math.abs(dragAnchor?.y - event.clientY) < 2
+    ) {
+      onDeselect(event);
+    }
+    dragAnchor = null;
   }}
   on:pointerdown={startDrag}
   on:pointermove={doDrag}

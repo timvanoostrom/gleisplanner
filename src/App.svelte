@@ -6,6 +6,7 @@
   import DimensionsControl from './DimensionsControl.svelte';
   import FlexGleisModeller from './FlexGleisModeller.svelte';
   import Gleis from './Gleis.svelte';
+  import GleisConfig from './GleisConfig.svelte';
   import GleisConnections from './GleisConnections.svelte';
   import GleisInventory from './GleisInventory.svelte';
   import GleisStats from './GleisStats.svelte';
@@ -37,6 +38,7 @@
     guidesToolEnabled,
     setGuidesToolEnabled,
     slopesByLayerId,
+    guideShapesEnabled,
   } from './store/workspace';
   import TrackLibControl from './TrackLibControl.svelte';
 
@@ -69,14 +71,7 @@
     <div class="PanelGroup">
       <GleisStats />
       <ScaleControl />
-      <ControlMenuPanel title="Shapes & Symbols">
-        <Button>Guide</Button>
-        <Button>Bridge</Button>
-        <Button>Tunnel</Button>
-        <Button>Booster</Button>
-        <Button>GBM16</Button>
-        <Button>OneControl</Button>
-      </ControlMenuPanel>
+      <GleisConfig />
       <ControlMenuPanel title="Tools">
         <Button
           isActive={$measureToolEnabled}
@@ -90,6 +85,14 @@
         >
           Guides
         </Button>
+        {#if $guidesToolEnabled}
+          <Button
+            isActive={$guideShapesEnabled}
+            on:click={() => guideShapesEnabled.update((val) => !val)}
+          >
+            Shapes
+          </Button>
+        {/if}
       </ControlMenuPanel>
     </div>
   </header>

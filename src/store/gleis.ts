@@ -140,6 +140,12 @@ export function updateGleis(
         ...gleisProps,
       } as unknown as GleisPropsPlanned;
 
+      for (const [key, val] of Object.entries(gleisUpdatePayload)) {
+        if (val === undefined) {
+          delete gleisUpdatePayload[key];
+        }
+      }
+
       if ('points' in gleisProps) {
         const proto = get(trackLibByArtNr)[gleisUpdatePayload.artnr];
         console.log('updateGLeis', proto, gleisUpdatePayload);
