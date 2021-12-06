@@ -1,5 +1,13 @@
 {
   "singleQuote": true,
   "trailingComma": "es5",
-  "react/prop-types": 1
+  "react/prop-types": 1,
+  "overrides": [
+    {
+      "files": "*.mjs",
+      "options": {
+        "parser": "babel"
+      }
+    }
+  ]
 }

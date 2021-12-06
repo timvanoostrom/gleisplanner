@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "outDir": "build-server",
+    "target": "es6",
+    "lib": [
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": false,
+    "downlevelIteration": true,
+    "importsNotUsedAsValues": "remove"
+  },
+  "include": [
+    "server"
+  ]
+}
