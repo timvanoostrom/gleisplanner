@@ -15,6 +15,7 @@
 
   onMount(() => {
     dialogPolyfill.registerDialog(dialog);
+    dispatch('created');
   });
 
   afterUpdate(() => {

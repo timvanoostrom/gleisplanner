@@ -196,7 +196,7 @@
 
 <style>
   .SlopeSegmentLabel {
-    font-size: 1.2em;
+    font-size: 1.6em;
     transform: translateX(5px);
   }
   .hit {

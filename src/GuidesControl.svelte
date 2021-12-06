@@ -1,26 +1,32 @@
 <script lang="ts">
+  import GuideRect from './GuideRect.svelte';
+
+  import ControlMenuPanel from './ControlMenuPanel.svelte';
+  import Dialog from './Dialog.svelte';
   import GuidePath from './GuidePath.svelte';
+  import { guideStyles, round } from './helpers/app';
   import { layerControl } from './store/layerControl';
   import { baseGroup } from './store/plane';
   import {
+    activeGuide,
     createGuide,
+    dimensions,
+    fillDialogActive,
     guidesInLayer,
     guidesToolEnabled,
-    dimensions,
+    guidesToolShapeType,
     removeGuide,
+    selectedGuideId,
     svgCoords,
     updateGuide,
-    guideShapesEnabled,
   } from './store/workspace';
   import type { Guide, Point } from './types';
+  import * as AColorPicker from 'a-color-picker';
+
+  const DEFAULT_FILL = 'rgba(255, 130, 130, 1)';
 
   let newPathPoints: Point[] = [];
-  let selectedGuideIds = [];
   let pointsSelected = [];
-
-  function points(points: Point[]) {
-    return points.filter((point) => !!point);
-  }
 
   function startOrFinishGuide(event: MouseEvent) {
     event.stopImmediatePropagation();
@@ -36,7 +42,7 @@
         points: newPathPoints.slice(0, -2).map((p) => ({ x: p.x, y: p.y })),
       });
       newPathPoints = [];
-      selectedGuideIds = [id];
+      selectedGuideId.set(id);
     }
   }
 
@@ -66,19 +72,37 @@
     newPathPoints = [point, point];
   }
 
+  function continuePath(guide: Guide, point: Point) {
+    const pIndex = guide.points.findIndex((p) => p === point);
+
+    if (pIndex !== -1) {
+      newPathPoints =
+        pIndex === 0
+          ? [...guide.points].reverse().concat(point)
+          : [...guide.points, point];
+      selectedGuideId.set(guide.id);
+    } else {
+      startPath(point);
+    }
+  }
+
   function closePath(point) {
     console.log('jap!');
     // Remove the mousepointer point
     newPathPoints.pop();
+    newPathPoints = newPathPoints.concat(point);
 
-    const points = newPathPoints.map((p) => ({ x: p.x, y: p.y }));
-    const { id } = createGuide({
-      layerId: $layerControl.activeLayerId,
-      points: [...points, point],
-    });
+    if ($selectedGuideId) {
+      updateGuide({ ...$activeGuide, points: newPathPoints });
+    } else {
+      const { id } = createGuide({
+        layerId: $layerControl.activeLayerId,
+        points: newPathPoints,
+      });
+      selectedGuideId.set(id);
+    }
 
     newPathPoints = [];
-    selectedGuideIds = [id];
   }
 
   function removeLastPoint() {
@@ -88,64 +112,66 @@
 
   function selectGuide(event, id) {
     event.stopPropagation();
-    if (selectedGuideIds.includes(id)) {
-      selectedGuideIds = [];
+    if ($selectedGuideId === id) {
+      selectedGuideId.set(null);
       pointsSelected = [];
     } else {
-      selectedGuideIds = [id];
+      selectedGuideId.set(id);
     }
   }
 
   function onKeydownRouter(event) {
     if ($guidesToolEnabled) {
       switch (event.key) {
-        case 'a':
-        case 'A':
-          if (event.metaKey && event.target.tagName !== 'INPUT') {
-            event.preventDefault();
-            // CMD + a selects  all guides  in active layer
-            // CMD + Shift + A selects all guides in every layer
-            let ids = $guidesInLayer
-              .filter(
-                (guide) =>
-                  event.shiftKey ||
-                  guide.layerId === $layerControl.activeLayerId
-              )
-              .map((guide) => guide.id);
-            selectedGuideIds = ids;
-          }
-          break;
+        // case 'a':
+        // case 'A':
+        //   if (event.metaKey && event.target.tagName !== 'INPUT') {
+        //     event.preventDefault();
+        //     // CMD + a selects  all guides  in active layer
+        //     // CMD + Shift + A selects all guides in every layer
+        //     let ids = $guidesInLayer
+        //       .filter(
+        //         (guide) =>
+        //           event.shiftKey ||
+        //           guide.layerId === $layerControl.activeLayerId
+        //       )
+        //       .map((guide) => guide.id);
+        //     selectedGuideId.set(ids);
+        //   }
+        //   break;
         case 'Backspace':
           event.preventDefault();
           event.stopImmediatePropagation();
 
-          if ($guideShapesEnabled) {
-            if (selectedShapeId) {
-              removeGuide([selectedShapeId]);
-              selectedShapeId = null;
+          if ($guidesToolShapeType !== 'line') {
+            if ($selectedGuideId) {
+              removeGuide([$selectedGuideId]);
+              selectedGuideId.set(null);
             }
             return;
           }
-
+          console.log('pointsSelected.length', pointsSelected.length);
           if (pointsSelected.length) {
             const guide = $guidesInLayer.find(
-              (guide) => guide.id === selectedGuideIds[0]
+              (guide) =>
+                guide.id === $selectedGuideId ||
+                guide.points.some((point) => pointsSelected.includes(point))
             );
             if (guide) {
               const pointsUpdated = guide.points.filter(
                 (point) => !pointsSelected.includes(point)
               );
               if (pointsUpdated.length <= 1) {
-                removeGuide([selectedGuideIds[0]]);
-                selectedGuideIds = [];
+                removeGuide([$selectedGuideId]);
+                selectedGuideId.set(null);
               } else {
                 updateGuide({ ...guide, points: pointsUpdated });
               }
               pointsSelected = [];
             }
           } else {
-            removeGuide(selectedGuideIds);
-            selectedGuideIds = [];
+            removeGuide($selectedGuideId);
+            selectedGuideId.set(null);
           }
 
           break;
@@ -155,7 +181,6 @@
   }
 
   $: shape = null;
-  $: selectedShapeId = null;
 
   function startOrFinishShape(event: MouseEvent) {
     event.stopPropagation();
@@ -164,6 +189,12 @@
       shape = {
         x: point.x,
         y: point.y,
+        points: [
+          {
+            x: point.x,
+            y: point.y,
+          },
+        ],
       };
     } else {
       const { id } = createGuide({
@@ -174,7 +205,7 @@
         transform: shape.transform,
       });
       shape = null;
-      selectedGuideIds = [id];
+      selectedGuideId.set(id);
     }
   }
 
@@ -202,22 +233,59 @@
   }
 
   function selectShape(id: Guide['id']) {
-    selectedShapeId = id;
+    selectedGuideId.update((xid) => {
+      if (xid === id) {
+        return null;
+      }
+      return id;
+    });
   }
 
   function moveShape() {
-    if (selectedShapeId) {
+    if (selectedGuideId) {
     }
   }
+
+  function setGuideStyle(styles) {
+    if ($activeGuide) {
+      updateGuide({
+        ...$activeGuide,
+        style: { ...($activeGuide.style || {}), ...styles },
+      });
+    }
+  }
+
+  $: tempGuide = newPathPoints.length
+    ? ({ points: newPathPoints } as Guide)
+    : null;
+
+  function onPathPointClick(event, guide) {
+    if (event.detail.shiftKey) {
+      pointsSelected = pointsSelected.includes(event.detail.point)
+        ? pointsSelected.filter((point) => point !== event.detail.point)
+        : [...pointsSelected, event.detail.point];
+      if (!selectedGuideId) {
+        selectedGuideId.set(guide.id);
+      }
+    } else {
+      newPathPoints.length
+        ? closePath(event.detail.point)
+        : continuePath(guide, event.detail.point);
+    }
+  }
+
+  $: console.log('$guidesInLayer:', $guidesInLayer);
 </script>
 
 <svelte:window
   on:keydown={onKeydownRouter}
   on:dblclick={(event) =>
-    $guideShapesEnabled ? startOrFinishShape(event) : startOrFinishGuide(event)}
+    $guidesToolShapeType !== 'line'
+      ? startOrFinishShape(event)
+      : startOrFinishGuide(event)}
   on:click={(event) => addPoint(event)}
   on:pointermove={(event) =>
-    $guideShapesEnabled ? drawShape(event) : moveEndPoint(event)}
+    $guidesToolShapeType !== 'line' ? drawShape(event) : moveEndPoint(event)}
 />
 
 <rect
@@ -227,66 +295,79 @@
   width={$dimensions.width}
   height={$dimensions.height}
 />
-<GuidePath
-  on:pathPointClick={(event) => closePath(event.detail.point)}
-  {pointsSelected}
-  points={points(newPathPoints)}
-  isTemp={true}
-/>
-{#if shape}
-  <rect
-    x={shape.x}
-    y={shape.y}
-    width={shape.width}
-    height={shape.height}
-    class="GuideShape"
-    transform={shape.transform}
+{#if tempGuide}
+  <GuidePath
+    on:pathPointClick={(event) => closePath(event.detail.point)}
+    {pointsSelected}
+    guide={tempGuide}
+    isTemp={true}
   />
 {/if}
+{#if shape}
+  <GuideRect guide={shape} />
+{/if}
 {#each $guidesInLayer as guide}
-  {#if guide.width && guide.height}
-    <rect
-      x={guide.points[0].x}
-      y={guide.points[0].y}
-      width={guide.width}
-      height={guide.height}
-      class="GuideShape"
-      class:isSelected={guide.id === selectedShapeId}
-      transform={guide.transform}
-      on:click={() => selectShape(guide.id)}
-    />
+  {#if guide.type === 'rect'}
+    <GuideRect {guide} on:click={() => selectShape(guide.id)} />
   {:else}
     <GuidePath
+      {guide}
       {pointsSelected}
-      isSelected={selectedGuideIds.includes(guide.id)}
-      on:pathPointClick={(event) => {
-        if (event.detail.shiftKey) {
-          pointsSelected = pointsSelected.includes(event.detail.point)
-            ? pointsSelected.filter((point) => point !== event.detail.point)
-            : [...pointsSelected, event.detail.point];
-          if (!selectedGuideIds.length) {
-            selectedGuideIds = [guide.id];
-          }
-        } else {
-          newPathPoints.length
-            ? closePath(event.detail.point)
-            : startPath(event.detail.point);
-        }
-      }}
+      on:pathPointClick={(event) => onPathPointClick(event, guide)}
       on:click={(event) => selectGuide(event, guide.id)}
-      points={points(guide.points)}
     />
   {/if}
 {/each}
 
+{#if $fillDialogActive}
+  <Dialog
+    id="ColorPickerDialog"
+    height="220px"
+    width="260px"
+    isOpen={true}
+    on:close={() => {
+      fillDialogActive.set(false);
+    }}
+    on:created={() => {
+      const [picker] = AColorPicker.from('[data-color-picker]', {
+        showHSL: false,
+        showRGB: false,
+        showHEX: false,
+        showAlpha: true,
+        color: $activeGuide?.style?.fill || DEFAULT_FILL,
+      });
+      picker.on('change', (picker, color) => {
+        setGuideStyle({
+          fill: color,
+        });
+      });
+    }}
+  >
+    <div class="DialogContent">
+      <ControlMenuPanel flex={false} title={'Select Color'}>
+        <div data-color-picker />
+      </ControlMenuPanel>
+    </div>
+  </Dialog>
+{/if}
+
 <style>
+  .DialogContent {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    align-content: center;
+    flex-direction: column;
+  }
   .GuidesPlane {
     fill: #fff;
     fill-opacity: 0.4;
   }
   .GuideShape {
-    fill: black;
-    fill-opacity: 0.4;
+    fill: rgba(255, 130, 130, 1);
+  }
+  .SizeLabel {
+    font-size: 10px;
   }
   .isSelected {
     stroke: red;

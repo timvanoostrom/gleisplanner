@@ -34,11 +34,11 @@
   } from './store/gleis';
   import {
     measureToolEnabled,
-    setMeasureToolEnabled,
     guidesToolEnabled,
-    setGuidesToolEnabled,
     slopesByLayerId,
-    guideShapesEnabled,
+    guidesToolShapeType,
+    fillDialogActive,
+    activeGuide,
   } from './store/workspace';
   import TrackLibControl from './TrackLibControl.svelte';
 
@@ -53,12 +53,12 @@
   function toggleTool(name: 'measure' | 'guides') {
     switch (name) {
       case 'measure':
-        setMeasureToolEnabled(!$measureToolEnabled);
-        setGuidesToolEnabled(false);
+        measureToolEnabled.update((measureToolEnabled) => !measureToolEnabled);
+        guidesToolEnabled.set(false);
         break;
       case 'guides':
-        setGuidesToolEnabled(!$guidesToolEnabled);
-        setMeasureToolEnabled(false);
+        guidesToolEnabled.update((guidesToolEnabled) => !guidesToolEnabled);
+        measureToolEnabled.set(false);
         break;
     }
   }
@@ -86,12 +86,18 @@
           Guides
         </Button>
         {#if $guidesToolEnabled}
+          {#each ['line', 'rect'] as type}
+            <Button
+              isActive={$guidesToolShapeType === type}
+              on:click={() => guidesToolShapeType.set(type)}
+            >
+              {type}
+            </Button>
+          {/each}
           <Button
-            isActive={$guideShapesEnabled}
-            on:click={() => guideShapesEnabled.update((val) => !val)}
+            disabled={!$activeGuide}
+            on:click={() => fillDialogActive.set(true)}>Fill</Button
           >
-            Shapes
-          </Button>
         {/if}
       </ControlMenuPanel>
     </div>

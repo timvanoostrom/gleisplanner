@@ -175,10 +175,10 @@
         ...layerControl,
         layers: event.detail.map((layer) => {
           return layer;
-          return {
-            ...layer,
-            color: getColor(),
-          };
+          // return {
+          //   ...layer,
+          //   color: getColor(),
+          // };
         }),
       };
     });
@@ -483,23 +483,6 @@
 </ControlMenuPanel>
 
 <style>
-  header {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 10px;
-  }
-
-  header > div {
-    display: flex;
-    justify-content: center;
-    flex-direction: row;
-  }
-
-  h4 {
-    padding: 0;
-    margin: 5px 0;
-  }
-
   .Layer {
     display: flex;
     align-items: center;

@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import { PROJECT_PREFIX } from '../config/constants';
-import type { Point } from '../types';
+import type { Guide, Point } from '../types';
 
 export function range(a: number, b: number) {
   return Array.from(
@@ -44,3 +44,11 @@ export function jsonCopy(data: any) {
 
 (globalThis as any)._l = console.log;
 (globalThis as any)._d = console.dir;
+
+export function guideStyles(guide: Guide) {
+  const styles = guide.style || {};
+  const styleStr = Object.entries(styles)
+    .map(([k, v]) => `${k}:${v}`)
+    .join(';');
+  return styleStr;
+}

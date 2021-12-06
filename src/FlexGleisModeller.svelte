@@ -17,6 +17,7 @@
   import { baseGroup, planeSvg } from './store/plane';
   import type { Point, ProtoSegmentFlex } from './types';
   import Rotator from './Rotator.svelte';
+  import { loadGleisPlanSaved } from './store/workspace';
 
   // drag handler
   let drag: boolean = false;
@@ -167,8 +168,8 @@
       onDragControlPoint(event);
     }
   }}
-  on:dblclick={() => {
-    if ($connectFlexPointStart) {
+  on:dblclick={(event) => {
+    if (!!event.target.closest('.AvailableSpace') && $connectFlexPointStart) {
       connectFlexPointStart.set(null);
       connectGleis({
         pointOrigin: flexPoints[0],

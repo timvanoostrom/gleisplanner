@@ -216,12 +216,10 @@ export const sidebarState = appConfigValue('sidebarState');
 export const guides = db<Guides>('guides', []);
 export const slopes = db<Slopes>('slopes', {});
 
-export const [measureToolEnabled, setMeasureToolEnabled] =
-  appConfigValue<boolean>('measureToolEnabled');
-export const [guidesToolEnabled, setGuidesToolEnabled] =
-  appConfigValue<boolean>('guidesToolEnabled');
-
-export const guideShapesEnabled = writable(false);
+export const measureToolEnabled = writable(false);
+export const guidesToolShapeType = writable('line');
+export const guidesToolEnabled = writable(false);
+export const fillDialogActive = writable(false);
 
 export const slopesCalculated = derived(slopes, (slopes) =>
   Object.values(slopes)
@@ -241,7 +239,6 @@ export const slopesByLayerId = derived(
         byLayerId[id].push(slope);
       }
     }
-    console.log('byLayerId', byLayerId);
     return byLayerId;
   }
 );
@@ -271,6 +268,15 @@ export const guidesInLayer = derived(
   }
 );
 
+export const selectedGuideId = writable(null);
+
+export const activeGuide = derived(
+  [selectedGuideId, guidesInLayer],
+  ([selectedGuideId, guidesInLayer]) => {
+    return guidesInLayer.find((guide) => guide.id === selectedGuideId);
+  }
+);
+
 interface CreateGuideProps {
   layerId: Layer['id'];
   points: Point[];
@@ -291,8 +297,10 @@ export function createGuide({
     label: '',
     points,
     layerId,
+    type: 'line',
   };
   if (width && height) {
+    newGuide.type = 'rect';
     newGuide.width = width;
     newGuide.height = height;
     if (transform) {

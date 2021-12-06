@@ -112,6 +112,10 @@
   };
 
   const onAddGleis = (event) => {
+    if (!event.target.closest('.AvailableSpace')) {
+      return;
+    }
+
     const { x, y } = baseGroupPoint(
       $planeSvg,
       $baseGroup,

@@ -2,12 +2,14 @@
   import * as d3 from 'd3-path';
   import { createEventDispatcher } from 'svelte';
   import { getMidPoint } from './helpers/geometry';
-  import type { Point } from './types';
+  import type { Guide, Point } from './types';
+  import { selectedGuideId } from './store/workspace';
+  import { guideStyles } from './helpers/app';
 
-  export let points: Point[] = [];
-  export let isSelected: boolean = false;
+  export let guide: Guide;
   export let isTemp: boolean = false;
   export let pointsSelected: Point[] = [];
+  export let noselect: boolean = false;
 
   const dispatch = createEventDispatcher();
   let path;
@@ -42,6 +44,7 @@
     dispatch('pathPointClick', { point, shiftKey });
   }
 
+  $: points = guide.points;
   $: pathLabels = generatePathLabels(points);
 
   $: {
@@ -57,10 +60,14 @@
   }
 </script>
 
-<g on:click class="Guide" class:isSelected>
+<g
+  on:click
+  class="Guide"
+  class:isSelected={!noselect && guide.id === $selectedGuideId}
+>
   {#if path}
     <path d={pathString} class="GuidePathSelect" />
-    <path d={pathString} class="GuidePath" />
+    <path d={pathString} class="GuidePath" style={guideStyles(guide)} />
   {/if}
   {#each points as point, index}
     {#if (isTemp && index !== points.length - 1) || !isTemp}

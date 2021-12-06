@@ -207,9 +207,11 @@ export interface Guide {
   points: Point[];
   label: string;
   layerId: Layer['id'];
+  type: 'line' | 'rect';
   width?: number;
   height?: number;
   transform?: string;
+  style?: Record<string, string>;
 }
 export type Guides = Guide[];
 

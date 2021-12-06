@@ -93,7 +93,6 @@ export const gleisPlannedWithPaths = derived(
 export const gleisPlanned = derived(
   [gleisPlannedDB, layersById],
   ([gleisPlannedDB, layersById]) => {
-    console.time('gleis calc');
     const gleisPlannedEntries = Object.entries(gleisPlannedDB);
     const visibleGleisPlanned = gleisPlannedEntries.filter(
       ([id, { layerId }]) => {
@@ -101,7 +100,6 @@ export const gleisPlanned = derived(
       }
     );
     const entries = Object.fromEntries(visibleGleisPlanned);
-    console.timeEnd('gleis calc');
     return entries;
   }
 );
@@ -699,52 +697,6 @@ export function shortCircuitConnections() {
     }
   );
 }
-
-// export function shortCircuitConnections() {
-//   // points that are in same layer and same type
-//   // points that are not in same layer but same type and endpoints
-//   return derived([gleisPlanned], ([gleisPlanned]) => {
-//     const scc = [];
-//     const c: Record<string, GleisRef[]> = {};
-
-//     for (const gleis of Object.values(gleisPlanned)) {
-//       for (const p of gleis.points) {
-//         if (p.type === 'c1' || p.type === 'c2') {
-//           const coordString = getCoordString(p);
-//           const gleisRef = { p, id: gleis.id, layerId: gleis.layerId };
-//           if (!c[coordString]) {
-//             c[coordString] = [gleisRef];
-//           } else {
-//             c[coordString].push(gleisRef);
-//           }
-//         }
-//       }
-//     }
-
-//     for (const gleisRefs of Object.values(c)) {
-//       const isSameType = gleisRefs.every(
-//         (r, i) => i !== 0 && r.p.type === gleisRefs[0].p.type
-//       );
-//       const isSameLayer = gleisRefs.every(
-//         (r, i) => i !== 0 && r.layerId === gleisRefs[0].layerId
-//       );
-
-//       if (isSameLayer && !isSameType) {
-//         scc.push(gleisRefs[0].p);
-//       }
-
-//       // if (gleisRefs.length >= 2) {
-//       //   // same layer, same type
-//       //   // is endpoint (1 in layer), different layer, same type
-//       //   scc.push(gleisRefs[0].p);
-//       //   for (const gleisRef of gleisRefs) {
-//       //   }
-//       // }
-//     }
-
-//     return scc;
-//   });
-// }
 
 export const slopesSelected = derived(
   [gleisPlannedSelected],

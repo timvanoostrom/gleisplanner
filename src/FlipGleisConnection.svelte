@@ -11,8 +11,10 @@
   import { calculateTurnoutCurvedPoints } from './helpers/turnoutCurved';
   import {
     findConnectingPointOrigin,
+    getCoordString,
     getRootPointOrigin,
     gleisIdsActive,
+    shortCircuitConnections,
     updateGleis,
   } from './store/gleis';
   import type {
@@ -28,6 +30,8 @@
   let pointOrigin = null;
   let switchPoints = null;
 
+  const scon = shortCircuitConnections();
+
   gleisIdsActive.subscribe(() => {
     resetConnectionSwitch();
   });
@@ -42,16 +46,45 @@
 
     for (const gleisProps of gleisPropsPayload) {
       const points = [];
+      const typeMap: Record<string, number> = gleisProps.points.reduce(
+        (acc, point) => {
+          if (point.type === 'c1' || point.type === 'c2') {
+            Object.assign(acc, { [point.type]: (acc?.[point.type] || 1) + 1 });
+          }
+          return acc;
+        },
+        {}
+      );
+
+      const hasShortCircuit = gleisProps.points.some((point) =>
+        $scon.some((cstr) => {
+          return cstr === point;
+        })
+      );
+
       for (const point of gleisProps.points) {
         if (point.type === 'c1' || point.type === 'c2') {
+          let type = point.type;
+          if (hasShortCircuit && (typeMap.c1 > 1 || typeMap.c2 > 1)) {
+            const scPoint = $scon.find((cstr) => {
+              return cstr === point;
+            });
+            if (scPoint) {
+              type = type === 'c1' ? 'c2' : 'c1';
+            }
+          } else {
+            type = type === 'c1' ? 'c2' : 'c1';
+          }
+
           points.push({
             ...point,
-            type: point.type === 'c1' ? 'c2' : 'c1',
+            type,
           });
         } else {
           points.push(point);
         }
       }
+
       updates.push({
         id: gleisProps.id,
         points,
