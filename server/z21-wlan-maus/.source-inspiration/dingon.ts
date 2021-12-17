@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 function findMsgID(headerReceived) {
   for (const [headerID, headerVal] of Object.entries(Z21_MSG)) {
     if (headerReceived === headerVal) {
