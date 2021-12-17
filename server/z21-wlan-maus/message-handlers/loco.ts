@@ -1,5 +1,5 @@
-import { printPayload } from '../helpers';
-import { DCCSTEP14, DCCSTEP28, directions, speedSteps } from '../z21-protocol';
+import { printMessageToHex } from '../../helpers';
+import { DCCSTEP14, DCCSTEP28, directions, speedSteps } from '../../config';
 
 export function LAN_X_LOCO_INFO(message: Uint8Array) {
   // TODO: Understand what this means
@@ -22,6 +22,17 @@ export function LAN_X_LOCO_INFO(message: Uint8Array) {
   const payload = [ 0x0e, 0x00, 0x40, 0x00, 0xef, adrMSB & 0x3f, adrLSB, speedSteps, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ];
 
   return payload;
+  // return [
+  //   0x07 + 0x02,
+  //   0x00,
+  //   0x40,
+  //   0x00,
+  //   0xef,
+  //   adrMSB & 0x3f,
+  //   adrLSB,
+  //   step,
+  //   message[8],
+  // ];
   //--------------------------------------------------------------------------------------------
   //Gibt aktuellen Lokstatus an Anfragenden Zur�ck
 
@@ -85,7 +96,7 @@ export function LAN_X_SET_LOCO_FUNCTION_reply(message: Uint8Array) {
 
 export function LAN_X_SET_LOCO_DRIVE_reply(message: Uint8Array) {
   // const loco_id = be16(message[6]) & 0x3fff;
-  console.log('LAN_X_SET_LOCO_DRIVE::', printPayload(message));
+  console.log('LAN_X_SET_LOCO_DRIVE::', printMessageToHex(message));
   const adrMSB = message[6];
   const adrLSB = message[7];
   /* LAN_X_SET_LOCO_DRIVE */
@@ -108,15 +119,5 @@ export function LAN_X_SET_LOCO_DRIVE_reply(message: Uint8Array) {
     message[8].toString(2)
   );
   // TODO: Send loco commands to BiDiB bus
-  return [
-    0x07 + 0x02,
-    0x00,
-    0x40,
-    0x00,
-    0xef,
-    adrMSB & 0x3f,
-    adrLSB,
-    step,
-    message[8],
-  ];
+  return LAN_X_LOCO_INFO(message);
 }

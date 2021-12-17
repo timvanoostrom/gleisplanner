@@ -1,5 +1,5 @@
 import dgram from 'dgram';
-import { addClient, Client } from './subscribed-clients';
+import { addClient, Client } from '../subscribed-clients';
 import { handleMessage, handleReplyAcknowlegdement } from './z21-controller';
 
 const server = dgram.createSocket('udp4');
@@ -10,15 +10,11 @@ server.on('error', (err) => {
   server.close();
 });
 
-export type SendReplyFunction = (
-  messageID: string,
-  reply: number[],
-  client: Client
-) => void;
+export type SendReplyFunction = (reply: number[], client: Client) => void;
 
 server.on('message', (message, rinfo) => {
   addClient(rinfo);
-  handleMessage(message, rinfo, (messageId, reply, client) => {
+  handleMessage(message, rinfo, (reply, client) => {
     if (reply.length) {
       const replyMessage = new Uint8Array(reply);
 

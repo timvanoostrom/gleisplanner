@@ -1,3 +1,5 @@
+import { green } from './helpers';
+
 export interface Client {
   address: string;
   port: number;
@@ -12,6 +14,7 @@ function clientIndex(client: Client) {
 
 export function addClient(client: Client) {
   if (clientIndex(client) === -1) {
+    console.log(green(`Client ${client.address} is subscribed.`));
     clients.push(client);
   }
 }

@@ -14,6 +14,7 @@
     "@types/lodash.debounce": "^4.0.6",
     "a-color-picker": "^1.2.1",
     "bezier-js": "^4.1.1",
+    "chalk": "^5.0.0",
     "computed-style-to-inline-style": "^3.0.0",
     "d3-path": "^3.0.1",
     "dgram": "^1.0.1",

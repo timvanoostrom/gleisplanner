@@ -1,5 +1,3 @@
-import { suppressedProtocolIdLogs } from './config';
-
 // export function le16(u: number) {
 //   return (u[1] << 8) | u[0];
 // }
@@ -21,35 +19,18 @@ import { suppressedProtocolIdLogs } from './config';
 //   u[1] = n2 >> 8;
 // }
 
-export function matchMessageId(
-  testMessage: number | Array<number | number[]>,
-  message: Buffer
-) {
-  if (!Array.isArray(testMessage)) {
-    // Match header value
-    return testMessage === message[2];
-  }
-  return testMessage.every((char, index) => {
-    const messageValue = message[index];
-    // Message:     [  0x00, 0x00, 0x02, 0x00 ]
-    // TestMessage: [ 0x00, 0x00, [0x00, 0x01, 0x02], 0x00 ]
-    // Match oneOf several test values.
-    if (Array.isArray(char)) {
-      return char.some((testValue) => testValue === messageValue);
-    }
-    return messageValue === char;
-  });
-}
-
-export function isSuppressedLog(messageId: string) {
-  return suppressedProtocolIdLogs.includes(messageId);
+export function getDCCAddress(addrMsb: number, addrLsb: number) {
+  return (addrMsb << 8) + addrLsb + 1;
 }
 
 export function xor(message: number[]) {
   return message.reduce((a, b) => a ^ b);
 }
 
-export function printPayload(message: Uint8Array, doPrint: boolean = false) {
+export function printMessageToHex(
+  message: Uint8Array,
+  doPrint: boolean = false
+) {
   let l = [];
   for (const x of message) {
     l.push('0x' + x.toString(16).padStart(2, '0'));
@@ -59,4 +40,12 @@ export function printPayload(message: Uint8Array, doPrint: boolean = false) {
     console.log('Payload:', payload);
   }
   return payload;
+}
+
+export function red(str: string) {
+  return `\x1b[0m\x1b[41m\x1b[37m${str}\x1b[0m`;
+}
+
+export function green(str: string) {
+  return `\x1b[0m\x1b[42m\x1b[30m${str}\x1b[0m`;
 }

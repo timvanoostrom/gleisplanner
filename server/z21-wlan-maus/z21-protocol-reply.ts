@@ -8,11 +8,11 @@ import {
   LAN_X_SET_TURNOUT,
   LAN_X_TURNOUT_INFO,
 } from './message-handlers/turnout';
-import { ProtoColMessage } from './z21-protocol';
+import { ProtocolMessage } from './z21-protocol';
 
 type ProtocolMessageReply =
-  | ProtoColMessage
-  | ((message: Uint8Array) => ProtoColMessage);
+  | ProtocolMessage
+  | ((message: Uint8Array) => ProtocolMessage);
 
 // b"\x08\x00\x10\x00\x12\x34\x56\x78"
 const LAN_GET_SERIAL_NUMBER_reply = [
