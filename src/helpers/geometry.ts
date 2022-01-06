@@ -174,3 +174,14 @@ export function calculateTrackLengthCM(path: PathSegmentProps) {
   }
   return 0;
 }
+
+export function isWithinRadius(p1: Point, p2: Point, r: number) {
+  const { x, y } = p1;
+  const { x: a, y: b } = p2;
+
+  const distance = (a - x) * (a - x) + (b - y) * (b - y);
+
+  r *= r;
+
+  return distance < r;
+}

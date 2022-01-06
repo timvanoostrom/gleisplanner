@@ -2,6 +2,7 @@
   import SVGPathCommander from 'svg-path-commander';
   import { svgPathProperties } from 'svg-path-properties';
   import { range, round } from './helpers/app';
+  import { isWithinRadius } from './helpers/geometry';
   import { getCoordString, gleisPlanned } from './store/gleis';
   import type { GleisPlanned, Point, SlopeConfig } from './types';
 
@@ -26,17 +27,6 @@
       pathSegments.push(mainPath.d);
     }
     return pathSegments;
-  }
-
-  function isWithinRadius(p1: Point, p2: Point, r: number) {
-    const { x, y } = p1;
-    const { x: a, y: b } = p2;
-
-    const distance = (a - x) * (a - x) + (b - y) * (b - y);
-
-    r *= r;
-
-    return distance < r;
   }
 
   $: markers = [];
