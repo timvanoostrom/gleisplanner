@@ -576,6 +576,7 @@ export function getCoordString({ x, y }: Point) {
   return round(x, 0) + ',' + round(y, 0);
 }
 
+export const isCutPathActive = writable(false);
 export const pointConnections = writable({});
 
 // export const activePointConnections = derived(
