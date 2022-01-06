@@ -22,11 +22,13 @@
   } from './store/workspace';
   import type { Guide, Point } from './types';
   import * as AColorPicker from 'a-color-picker';
+  import Button from './Button.svelte';
 
   const DEFAULT_FILL = 'rgba(255, 130, 130, 1)';
 
   let newPathPoints: Point[] = [];
   let pointsSelected = [];
+  let activeGuideColor = DEFAULT_FILL;
 
   function startOrFinishGuide(event: MouseEvent) {
     event.stopImmediatePropagation();
@@ -322,19 +324,20 @@
 {#if $fillDialogActive}
   <Dialog
     id="ColorPickerDialog"
-    height="220px"
+    height="auto"
     width="260px"
     isOpen={true}
     on:close={() => {
       fillDialogActive.set(false);
     }}
     on:created={() => {
+      activeGuideColor = $activeGuide?.style?.fill || activeGuideColor;
       const [picker] = AColorPicker.from('[data-color-picker]', {
         showHSL: false,
         showRGB: false,
         showHEX: false,
         showAlpha: true,
-        color: $activeGuide?.style?.fill || DEFAULT_FILL,
+        color: activeGuideColor,
       });
       picker.on('change', (picker, color) => {
         setGuideStyle({
@@ -347,6 +350,26 @@
       <ControlMenuPanel flex={false} title={'Select Color'}>
         <div data-color-picker />
       </ControlMenuPanel>
+      <footer class="DialogFooter">
+        <Button
+          on:click={() => {
+            fillDialogActive.set(false);
+          }}
+        >
+          Ok
+        </Button>
+        <Button
+          variant="plain"
+          on:click={() => {
+            setGuideStyle({
+              fill: activeGuideColor,
+            });
+            fillDialogActive.set(false);
+          }}
+        >
+          Cancel
+        </Button>
+      </footer>
     </div>
   </Dialog>
 {/if}
