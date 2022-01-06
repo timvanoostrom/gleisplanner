@@ -23,7 +23,6 @@ export function connectFlex(
   pointOrigin: Point,
   protoSegment: ProtoSegmentFlex
 ) {
-  console.log('sss', pointOrigin);
   const flexPoints = calculateFlexPoints({
     pointOrigin,
     proto: protoSegment,
@@ -71,14 +70,14 @@ export function calculateFlexPoints({
     let calcEndAngle = pointsAngle - A180;
 
     const isMovingUp = connectStart.y > pointOrigin.y;
-    const isMovingDown = !isMovingUp;
+    // const isMovingDown = !isMovingUp;
     const isMovingRight = connectStart.x < pointOrigin.x;
     const isMovingLeft = !isMovingRight;
 
-    const isNW = isMovingUp && isMovingLeft;
-    const isNE = isMovingUp && isMovingRight;
-    const isSW = isMovingDown && isMovingLeft;
-    const isSE = isMovingDown && isMovingRight;
+    // const isNW = isMovingUp && isMovingLeft;
+    // const isNE = isMovingUp && isMovingRight;
+    // const isSW = isMovingDown && isMovingLeft;
+    // const isSE = isMovingDown && isMovingRight;
 
     if (useMaxLength) {
       const xMax = connectStart.x + Math.cos(pointsAngle) * proto.length;
@@ -190,7 +189,7 @@ export function calculateFlexPoints({
   }
 }
 
-function addBezierCurveTo(path: d3.Path, bezier: Bezier) {
+export function addBezierCurveTo(path: d3.Path, bezier: Bezier) {
   path.bezierCurveTo(
     bezier.points[1].x,
     bezier.points[1].y,
@@ -215,6 +214,8 @@ export function generateFlexPaths(
     { x: x2, y: y2, direction: direction2 },
   ] = points;
 
+  console.log('p!', points)
+
   let previewBezier;
 
   try {
@@ -232,7 +233,7 @@ export function generateFlexPaths(
   const splitsPath = d3.path();
   mainPath.moveTo(previewBezier.points[0].x, previewBezier.points[0].y);
   addBezierCurveTo(mainPath, previewBezier);
-
+  console.log('mainPath.toString()',mainPath.toString())
   const pathProps = new svgPathProperties(mainPath.toString());
   const pathLen = previewBezier.length();
   const flexCount = pathLen / proto.length;
