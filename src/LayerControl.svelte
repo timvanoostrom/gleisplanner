@@ -1,12 +1,12 @@
 <script lang="ts">
   import debounce from 'lodash.debounce';
-  import { HsvPicker } from 'svelte-color-picker';
+  import * as AColorPicker from 'a-color-picker';
   import SortableList from 'svelte-sortable-list';
   import Button from './Button.svelte';
   import { patterns } from './config/svg-fill-patterns';
   import ControlMenuPanel from './ControlMenuPanel.svelte';
   import Dialog from './Dialog.svelte';
-  import { generateID, getColor, rgbToHex } from './helpers/app';
+  import { generateID, getColor } from './helpers/app';
   import Icon from './Icon.svelte';
   import IconButton from './IconButton.svelte';
   import MenuTabs from './MenuTabs.svelte';
@@ -26,6 +26,9 @@
 
   import type { GleisPropsPlanned, Layer } from './types';
 
+  const DEFAULT_FILL = 'rgba(255, 130, 130, 1)';
+
+  let layerColorInitial = DEFAULT_FILL;
   let deleteDialogLayerId: Layer['id'] = '';
   let editDialogLayerId: Layer['id'] = '';
   let colorPickerDialogId: Layer['id'] = '';
@@ -175,25 +178,18 @@
         ...layerControl,
         layers: event.detail.map((layer) => {
           return layer;
-          // return {
-          //   ...layer,
-          //   color: getColor(),
-          // };
         }),
       };
     });
   }
 
-  const updateLayerColor = debounce((color) => {
+  const updateLayerColor = debounce((color, colorPickerDialogId) => {
     if (!colorPickerDialogId) {
       return;
     }
-    const r = color.r;
-    const g = color.g;
-    const b = color.b;
     updateLayer({
       [colorPickerDialogId]: {
-        color: rgbToHex(r, g, b),
+        color,
       },
     });
   }, 100);
@@ -400,31 +396,40 @@
       </div>
     </Dialog>
   {/if}
-
   {#if colorPickerDialogId}
     <Dialog
       id="ColorPickerDialog"
-      height="460px"
+      height="auto"
       width="260px"
       isOpen={true}
       on:close={() => {
         colorPickerDialogId = '';
       }}
+      on:created={() => {
+        layerColorInitial =
+          $layersById[colorPickerDialogId].color || layerColorInitial;
+        console.log('!! layerColorInitial !!', layerColorInitial);
+        const [picker] = AColorPicker.from('[data-color-picker]', {
+          showHSL: false,
+          showRGB: false,
+          showHEX: false,
+          showAlpha: true,
+          color: layerColorInitial,
+        });
+        picker.on('change', (picker, color) => {
+          updateLayerColor(color, colorPickerDialogId);
+        });
+      }}
     >
       <div class="DialogContent">
         <MenuTabs tabs={[{ title: 'Color' }, { title: 'Pattern' }]}>
           <div slot="tab-1">
-            <ControlMenuPanel flex={false} title={'Select Color'}>
-              <HsvPicker
-                on:colorChange={(event) => {
-                  updateLayerColor(event.detail);
-                }}
-                startColor={$layersById[colorPickerDialogId].color || '#000000'}
-              />
+            <ControlMenuPanel flex={false}>
+              <div data-color-picker />
             </ControlMenuPanel>
           </div>
           <div slot="tab-2">
-            <ControlMenuPanel flex={false} title={'Select pattern'}>
+            <ControlMenuPanel flex={false}>
               <ul class="PatternExamples">
                 <li
                   class="PatternExample"
@@ -473,8 +478,12 @@
           >
             Ok
           </Button>
-          <Button variant="plain" on:click={() => (colorPickerDialogId = '')}
-            >Cancel</Button
+          <Button
+            variant="plain"
+            on:click={() => {
+              updateLayerColor(layerColorInitial, colorPickerDialogId);
+              colorPickerDialogId = '';
+            }}>Cancel</Button
           >
         </footer>
       </div>
