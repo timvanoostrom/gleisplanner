@@ -17,6 +17,8 @@
   id={gleisProps.id}
   class={`Gleis`}
   class:isActive
+  class:hasTunnel={!!gleisProps?.config?.tunnel}
+  class:hasBridge={!!gleisProps?.config?.bridge}
   on:click={(event) => {
     if (!disabled) {
       event.stopPropagation();
@@ -43,6 +45,7 @@
 <style>
   .spath {
     fill: none;
+    /* transform: perspective(300px) rotateX(30deg); */
   }
   .main {
     stroke: black;
@@ -80,5 +83,8 @@
     /* stroke: #000; */
     fill: #000;
     stroke: none;
+  }
+  .hasTunnel .spath {
+    opacity: 0.5;
   }
 </style>

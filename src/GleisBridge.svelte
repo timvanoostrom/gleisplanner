@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { range } from './helpers/app';
   import * as d3 from 'd3-path';
   import { svgPathProperties } from 'svg-path-properties';
-  import type { GleisPropsPlanned } from './types';
-  import { getMidPoint, rotate, toRad } from './helpers/geometry';
   import { GLEIS_WIDTH_WB } from './config/constants';
+  import { range } from './helpers/app';
+  import { rotate, toRad } from './helpers/geometry';
+  import type { GleisPropsPlanned } from './types';
 
   export let gleisProps: GleisPropsPlanned;
   const spreadB = GLEIS_WIDTH_WB * 0.75;
@@ -13,7 +13,7 @@
     const splitsPath = d3.path();
     const pathProps = new svgPathProperties(path);
     const pathLen = pathProps.getTotalLength();
-    _l('pathLen', pathLen);
+
     const sl = 15;
 
     const max = pathLen / sl;
@@ -46,7 +46,7 @@
         splitsPath.lineTo(p2.x, p2.y);
       }
     }
-    console.log('splits', splits);
+
     return splitsPath;
   }
 
