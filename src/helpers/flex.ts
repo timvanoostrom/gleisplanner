@@ -214,8 +214,6 @@ export function generateFlexPaths(
     { x: x2, y: y2, direction: direction2 },
   ] = points;
 
-  console.log('p!', points)
-
   let previewBezier;
 
   try {
@@ -233,7 +231,7 @@ export function generateFlexPaths(
   const splitsPath = d3.path();
   mainPath.moveTo(previewBezier.points[0].x, previewBezier.points[0].y);
   addBezierCurveTo(mainPath, previewBezier);
-  console.log('mainPath.toString()',mainPath.toString())
+
   const pathProps = new svgPathProperties(mainPath.toString());
   const pathLen = previewBezier.length();
   const flexCount = pathLen / proto.length;

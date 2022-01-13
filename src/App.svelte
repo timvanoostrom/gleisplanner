@@ -30,6 +30,7 @@
     gleisPlannedSelected,
     gleisPlannedSelectedByLayerId,
     gleisPlannedUnselectedByLayerId,
+    isCutPathActive,
     singleFlexActive,
   } from './store/gleis';
   import {
@@ -85,6 +86,14 @@
         >
           Guides
         </Button>
+        {#if $gleisPlannedSelected?.[0]?.type === 'Flex'}
+          <Button
+            isActive={$isCutPathActive}
+            on:click={() => isCutPathActive.update((isActive) => !isActive)}
+          >
+            Cut path
+          </Button>
+        {/if}
         {#if $guidesToolEnabled}
           {#each ['line', 'rect'] as type}
             <Button

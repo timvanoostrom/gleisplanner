@@ -39,7 +39,7 @@
   }
 
   function gleisPoints(gleisProps: GleisPropsPlanned) {
-    return gleisProps.points.filter((p) => {
+    const points = gleisProps.points.filter((p) => {
       const connectedIDs = $pointConnections[getCoordString(p)]?.filter(
         (id) => {
           return (
@@ -48,6 +48,7 @@
           );
         }
       );
+
       return (
         p.type === 'c1' ||
         (p.type === 'c2' &&
@@ -56,6 +57,8 @@
             connectedIDs.some((id) => $gleisIdsActive.includes(id)))) // endpoint
       );
     });
+
+    return points;
   }
 </script>
 

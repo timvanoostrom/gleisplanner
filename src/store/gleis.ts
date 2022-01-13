@@ -56,10 +56,8 @@ export const [gleisIdsActive, setGleisIdsActive] =
   appConfigValue<string[]>('gleisIdsActive');
 
 export function setGleisIdActive(id: string, isMulti: boolean = false) {
-  console.log('setactive', id, isMulti);
   setGleisIdsActive((ids) => {
     if (ids.includes(id)) {
-      console.log('rm', id);
       return ids.filter((sid) => sid !== id);
     }
     return isMulti ? [...ids, id] : [id];
@@ -146,8 +144,8 @@ export function updateGleis(
 
       if ('points' in gleisProps) {
         const proto = get(trackLibByArtNr)[gleisUpdatePayload.artnr];
-        console.log('updateGLeis', proto, gleisUpdatePayload);
         const segments = generateSegments(gleisUpdatePayload, proto);
+
         gleisUpdatePayload.pathSegments = segments.map((ps) => {
           return {
             ...ps,
@@ -336,9 +334,7 @@ export function connectGleis({ pointOrigin, flexPoints }: ConnectGleisProps) {
     return;
   }
 
-  const gleisAll = get(gleisPlannedDB);
   const connectedGleis = findConnectingGleis(pointOrigin);
-  console.log('connectedGleis', connectedGleis);
   const connectingPointOrigin = connectedGleis?.points.find((p) => {
     return p.x === pointOrigin.x && p.y === pointOrigin.y;
   });
@@ -483,7 +479,6 @@ export function findConnectingGleis(
   cid?: GleisPropsPlanned['id']
 ): GleisPropsPlanned | undefined {
   const ids = getConnectedPoint(point);
-  console.log('ids', ids);
   if (!ids) {
     return;
   }

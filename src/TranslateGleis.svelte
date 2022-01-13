@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { Readable } from 'svelte/store';
+  import { isCutPathActive } from './store/gleis';
   import { svgCoords } from './store/workspace';
   import type { GleisPropsPlanned } from './types';
 
@@ -160,7 +161,7 @@
   class="TransformHost"
   transform={translationTransform}
 >
-  {#if !isMultiSelectActive && selectionArea}
+  {#if !isMultiSelectActive && !$isCutPathActive && selectionArea}
     <rect
       class="selectionArea"
       x={selectionArea.x}

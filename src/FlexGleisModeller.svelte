@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { Bezier } from 'bezier-js';
+  import debounce from 'lodash.debounce';
+  import { beforeUpdate, onDestroy, onMount, tick } from 'svelte';
   import { A90 } from './config/constants';
   import {
     calculateFlexPoints,
@@ -10,18 +12,18 @@
   import { baseGroupPoint } from './helpers/svg';
   import {
     connectGleis,
+    isCutPathActive,
     protoGleisActive,
     singleFlexActive,
     updateGleis,
   } from './store/gleis';
   import { baseGroup, planeSvg } from './store/plane';
   import type { Point, ProtoSegmentFlex } from './types';
-  import Rotator from './Rotator.svelte';
-  import { loadGleisPlanSaved } from './store/workspace';
 
   // drag handler
   let drag: boolean = false;
   let controlPointIndexes;
+  let bezierInstance = null;
 
   const protoSegment = $protoGleisActive.segments[0] as ProtoSegmentFlex;
 
@@ -30,14 +32,41 @@
     flexPoints.length === 4
       ? generateFlexPaths(flexPoints, protoSegment)
       : null;
-  $: p3 = flexPoints && flexPoints[3];
 
   onMount(() => {
-    console.info('FlexModeller active', $singleFlexActive);
+    console.info('FlexModeller active', !!$singleFlexActive);
     if ($singleFlexActive) {
       flexPoints = $singleFlexActive.points;
     }
   });
+
+  beforeUpdate(async () => {
+    if (flexPoints.length && $isCutPathActive) {
+      bezierInstance = createBezierFromPoints(flexPoints);
+    }
+  });
+
+  $: cutPoints = [];
+
+  function setCutPoints(event) {
+    const mousePoint = baseGroupPoint(
+      $planeSvg,
+      $baseGroup,
+      $baseGroup as SVGGeometryElement,
+      {
+        x: event.clientX,
+        y: event.clientY,
+      }
+    );
+
+    const pathPoint = bezierInstance.project(mousePoint);
+
+    if (pathPoint) {
+      cutPoints = [mousePoint, pathPoint];
+    }
+  }
+
+  const setCutPointsDebounced = debounce(setCutPoints, 2);
 
   function updateFlexPoints(
     flexPoints: Point[],
@@ -157,6 +186,79 @@
       }
     }
   }
+
+  function createBezierFromPoints(points) {
+    const [
+      { x: x1, y: y1 },
+      { x: cpx1, y: cpy1 },
+      { x: cpx2, y: cpy2 },
+      { x: x2, y: y2 },
+    ] = points;
+
+    return new Bezier(x1, y1, cpx1, cpy1, cpx2, cpy2, x2, y2);
+  }
+
+  function cutPathAtPoint() {
+    const cutPathAt = cutPoints?.[1];
+    if (cutPathAt) {
+      const b1 = bezierInstance.split(cutPathAt.t);
+      let split1Points = b1.left.points.map((p, i) => {
+        return {
+          ...flexPoints[i],
+          ...p,
+        };
+      });
+      let split2Points = b1.right.points.map((p, i) => {
+        return {
+          ...flexPoints[i],
+          ...p,
+        };
+      });
+
+      // Updates the angle for connection point
+      split1Points = updateFlexPoints(
+        split1Points,
+        1,
+        split1Points[1].x,
+        split1Points[1].y
+      );
+      split1Points = updateFlexPoints(
+        split1Points,
+        2,
+        split1Points[2].x,
+        split1Points[2].y
+      );
+
+      split2Points = updateFlexPoints(
+        split2Points,
+        1,
+        split2Points[1].x,
+        split2Points[1].y
+      );
+      split2Points = updateFlexPoints(
+        split2Points,
+        2,
+        split2Points[2].x,
+        split2Points[2].y
+      );
+
+      updateGleis([
+        {
+          id: $singleFlexActive.id,
+          points: split1Points,
+        },
+      ]);
+
+      connectGleis({
+        pointOrigin: split2Points[0],
+        flexPoints: split2Points,
+      });
+
+      flexPoints = [];
+      cutPoints = [];
+      isCutPathActive.set(false);
+    }
+  }
 </script>
 
 <svelte:window
@@ -166,6 +268,9 @@
     }
     if (drag) {
       onDragControlPoint(event);
+    }
+    if (!drag && !$connectFlexPointStart && $isCutPathActive) {
+      setCutPointsDebounced(event);
     }
   }}
   on:dblclick={(event) => {
@@ -227,6 +332,23 @@
   />
 {/if}
 
+{#if cutPoints.length && $isCutPathActive}
+  <line
+    class="CutPoint"
+    x1={cutPoints[0].x}
+    y1={cutPoints[0].y}
+    x2={cutPoints[1].x}
+    y2={cutPoints[1].y}
+  />
+  <circle
+    cx={cutPoints[1].x}
+    cy={cutPoints[1].y}
+    r="5"
+    class="CutPointAt"
+    on:click={cutPathAtPoint}
+  />
+{/if}
+
 <style>
   .spath {
     stroke-width: 1px;
@@ -258,5 +380,16 @@
   }
   .end {
     fill: blue;
+  }
+  .CutPoint {
+    stroke: #000;
+  }
+  .CutPointAt {
+    fill: transparent;
+  }
+  .CutPointAt:hover {
+    stroke-width: 1px;
+    stroke: #000;
+    stroke-opacity: 0.9;
   }
 </style>
