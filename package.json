@@ -5,13 +5,17 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "server:dev": "ts-node --project ./tsconfig.server.json ./server/z21-server.ts",
-    "server:watch": "nodemon -e ts -w ./server -x npm run server:dev",
-    "server:build": "tsc --project ./tsconfig.bff.json"
+    "wlanmaus:dev": "ts-node --project ./tsconfig.wlanmaus.json ./server/wlanmaus/app.ts",
+    "wlanmaus:watch": "nodemon -e ts -w ./server -x npm run wlanmaus:dev",
+    "wlanmaus:build": "tsc --project ./tsconfig.wlanmaus.json",
+    "netbidibnode:dev": "ts-node --project ./tsconfig.netbidibnode.json ./server/netbidibnode/app.ts",
+    "netbidibnode:watch": "nodemon -e ts -w ./server -x npm run netbidibnode:dev",
+    "netbidibnode:build": "tsc --project ./tsconfig.netbidibnode.json"
   },
   "dependencies": {
     "@types/d3-path": "^3.0.0",
     "@types/lodash.debounce": "^4.0.6",
+    "@types/serialport": "^8.0.2",
     "a-color-picker": "^1.2.1",
     "bezier-js": "^4.1.1",
     "chalk": "^5.0.0",
@@ -24,6 +28,7 @@
     "lodash.throttle": "^4.1.1",
     "nanoid": "^3.1.30",
     "parse-svg-path": "^0.1.2",
+    "serialport": "^9.2.8",
     "svelte-color-picker": "^1.0.7",
     "svelte-sortable-list": "^1.1.0",
     "svg-path-commander": "^0.1.10",

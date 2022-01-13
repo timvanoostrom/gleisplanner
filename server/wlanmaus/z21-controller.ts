@@ -3,7 +3,7 @@ import { Client, getSubscribedClients } from '../subscribed-clients';
 import { findMessageID, isSuppressedLog } from './helpers';
 import { subscribedClientMessages } from './z21-protocol';
 import { replies as z21ProtocolReplies } from './z21-protocol-reply';
-import { SendReplyFunction } from './z21-server';
+import { SendReplyFunction } from './app';
 
 export function handleMessage(
   message: Buffer,

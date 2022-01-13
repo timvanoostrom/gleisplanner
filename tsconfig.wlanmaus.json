@@ -20,6 +20,6 @@
     "importsNotUsedAsValues": "remove"
   },
   "include": [
-    "server"
+    "server/wlanmaus"
   ]
 }
