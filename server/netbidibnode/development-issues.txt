@@ -1,0 +1,8 @@
+
+
+Identify not possible after On/Off
+------------------------------------------------------------------------------
+1. Press Identify -> result: MSG_SYS_IDENTIFY_STATE received
+2. Press On/Off -> result: BIDIB_CS_STATE_SOFTSTOP + BIDIB_CS_STATE_STOP
+3. Press On/Off -> result: BIDIB_CS_STATE_GO
+4. Press Identify -> result: No message received

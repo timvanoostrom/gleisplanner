@@ -27,10 +27,7 @@ export function xor(message: number[]) {
   return message.reduce((a, b) => a ^ b);
 }
 
-export function printMessageToHex(
-  message: Uint8Array,
-  doPrint: boolean = false
-) {
+export function printMessageToHex(message: number[], doPrint: boolean = false) {
   let l = [];
   for (const x of message) {
     l.push('0x' + x.toString(16).padStart(2, '0'));
