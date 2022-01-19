@@ -1,12 +1,9 @@
 import { NodeAddress } from '../config';
-import { BIDIB_PKT_MAGIC, MSG_CS_STATE } from '../protocol';
-import {
-  getBidibMssageDetails,
-  logColor,
-  sendMessagesWithoutData,
-} from '../utils';
+import { MSG_CS_SET_STATE, MSG_CS_STATE } from '../protocol';
+import { sendMessagesWithData } from '../serial-device';
+import { getBidibMessageDetails, logColor } from '../utils';
 
-export enum BidibSysState {
+export enum BidibCsState {
   BIDIB_CS_STATE_OFF = 0x00, // no DCC, DCC-line is static, not toggling
   BIDIB_CS_STATE_STOP = 0x01, // DCC, all speed setting = 0
   BIDIB_CS_STATE_SOFTSTOP = 0x02, // DCC, soft stop is progress
@@ -18,23 +15,18 @@ export enum BidibSysState {
   BIDIB_CS_STATE_QUERY = 0xff,
 }
 
-type BidibSendSysState =
-  | BidibSysState.BIDIB_CS_STATE_OFF
-  | BidibSysState.BIDIB_CS_STATE_STOP
-  | BidibSysState.BIDIB_CS_STATE_GO_IGN_WD
-  | BidibSysState.BIDIB_CS_STATE_GO;
-
-export function handleBidibControlStationStartupMessage(message: Uint8Array) {
-  const { type, payload, firstDataByteIndex } = getBidibMssageDetails(message);
+export function handleBidibControlStationMessage(message: Uint8Array) {
+  const { type, payload, firstDataByteIndex } = getBidibMessageDetails(message);
 
   switch (type) {
     case MSG_CS_STATE:
       const state = payload[firstDataByteIndex];
-      console.log('And the State is...', logColor(`${BidibSysState[state]}`));
+      console.log('And the State is...', logColor(`${BidibCsState[state]}`));
       break;
   }
 }
 
-export function sendCsState(addr: NodeAddress, state: BidibSendSysState) {
-  sendMessagesWithoutData(addr, [BIDIB_PKT_MAGIC, state]);
+export function sendCsState(addr: NodeAddress, state: BidibCsState) {
+  const message = [MSG_CS_SET_STATE, state];
+  sendMessagesWithData(addr, [message]);
 }

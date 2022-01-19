@@ -1,46 +1,40 @@
-import { CS_NODE_ADDRESS } from '../config';
+import { NodeAddress } from '../config';
 import {
   BIDIB_PKT_MAGIC,
-  MSG_SYS_GET_MAGIC,
-  MSG_SYS_GET_UNIQUE_ID,
-  MSG_SYS_GET_P_VERSION,
-  MSG_SYS_GET_SW_VERSION,
+  MSG_NODETAB_COUNT,
   MSG_NODETAB_GETALL,
   MSG_SYS_ENABLE,
-  MSG_CS_STATE,
-  MSG_NODETAB_COUNT,
+  MSG_SYS_GET_MAGIC,
+  MSG_SYS_GET_P_VERSION,
+  MSG_SYS_GET_SW_VERSION,
+  MSG_SYS_GET_UNIQUE_ID,
   MSG_SYS_P_VERSION,
   MSG_SYS_SW_VERSION,
   MSG_SYS_UNIQUE_ID,
 } from '../protocol';
-import {
-  getBidibMssageDetails,
-  getUID,
-  logColor,
-  sendMessagesWithoutData,
-} from '../utils';
+import { sendMessagesWithoutData } from '../serial-device';
+import { getBidibMessageDetails, getUID, logColor } from '../utils';
 
-export function sendBidibControlStationStartup() {
-  sendMessagesWithoutData(CS_NODE_ADDRESS, [
+export function sendBidibControlStationStartup(nodeAddress: NodeAddress) {
+  sendMessagesWithoutData(nodeAddress, [
     BIDIB_PKT_MAGIC,
     BIDIB_PKT_MAGIC,
     MSG_SYS_GET_MAGIC,
-    BIDIB_PKT_MAGIC,
     MSG_SYS_GET_UNIQUE_ID,
-    BIDIB_PKT_MAGIC,
     MSG_SYS_GET_P_VERSION,
-    BIDIB_PKT_MAGIC,
     MSG_SYS_GET_SW_VERSION,
-    BIDIB_PKT_MAGIC,
     MSG_NODETAB_GETALL,
-    BIDIB_PKT_MAGIC,
     MSG_SYS_ENABLE,
-    BIDIB_PKT_MAGIC,
   ]);
 }
 
-export function handleBidibControlStationStartupMessage(message: Uint8Array) {
-  const { type, payload, firstDataByteIndex } = getBidibMssageDetails(message);
+export function handleBidibControlStationStartupMessage(
+  message: Uint8Array | null
+) {
+  if (!message) {
+    return;
+  }
+  const { type, payload, firstDataByteIndex } = getBidibMessageDetails(message);
 
   switch (type) {
     case MSG_SYS_UNIQUE_ID:

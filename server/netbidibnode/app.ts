@@ -1,10 +1,16 @@
+import { CS_NODE_ADDRESS } from './config';
+import {
+  BidibCsState,
+  handleBidibControlStationMessage,
+  sendCsState,
+} from './messages/control-station';
 import {
   handleBidibControlStationStartupMessage,
   sendBidibControlStationStartup,
-} from './messages/startup';
-import { BIDIB_PKT_MAGIC } from './protocol';
-import { Delimiter, openSerialPort } from './serial-device';
-import { bidibLogReceivedMessage, getBidibMssageDetails } from './utils';
+} from './messages/system-startup';
+import { getSerialParser, openSerialPort } from './serial-device';
+import { bidibLogReceivedMessage } from './utils';
+// import { bidibLogReceivedMessage, getBidibMessageDetails, wait } from './utils';
 
 function onBidibUplinkMessage(message: Uint8Array) {
   // MESSAGE ::= MSG_LENGTH  MSG_ADDR  MSG_NUM  MSG_TYPE  DATA
@@ -20,25 +26,26 @@ function onBidibUplinkMessage(message: Uint8Array) {
   console.log('\n');
   bidibLogReceivedMessage(message);
   handleBidibControlStationStartupMessage(message);
+  handleBidibControlStationMessage(message);
 }
 
 (async function start() {
   const serialport = await openSerialPort();
+  const parser = getSerialParser();
 
-  if (!serialport) {
+  if (!serialport || !parser) {
     console.error('Could not open serial port');
     process.exit(1);
   } else {
-    const parser = serialport.pipe(
-      new Delimiter({ delimiter: [BIDIB_PKT_MAGIC] })
-    );
-
-    parser.on('data', onBidibUplinkMessage);
-
     serialport.on('error', function (err) {
       console.log('Error: ', err.message);
     });
+    parser.on('data', (message) => {
+      onBidibUplinkMessage(message);
+    });
 
-    sendBidibControlStationStartup();
+    sendBidibControlStationStartup(CS_NODE_ADDRESS);
+    // await wait(500);
+    // sendCsState(CS_NODE_ADDRESS, BidibCsState.BIDIB_CS_STATE_OFF);
   }
 })();

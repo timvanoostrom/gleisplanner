@@ -5,7 +5,6 @@ import {
   BIDIB_CRC_ARRAY,
   BIDIB_ERROR_MESSAGE_TYPES,
   BIDIB_MESSAGE_TYPES,
-  NodeAddress,
 } from './config';
 import {
   BIDIB_ERR_BUS,
@@ -14,12 +13,12 @@ import {
   BIDIB_PKT_MAGIC,
   MSG_SYS_ERROR,
 } from './protocol';
-import { sendMessage } from './serial-device';
 
 export function bidibExtractMsgType(message: number[]) {
   let i = 0;
   do {
     i++;
+    // console.log('get.type');
   } while (message[i] != 0x00);
   return message[i + 2];
 }
@@ -31,6 +30,7 @@ export function bidibExtractAddress(message: number[]) {
   do {
     addr[i] = message[i + 1];
     i++;
+    // console.log('get.addr');
   } while (message[i] != 0x00);
 
   while (i < 4) {
@@ -45,6 +45,7 @@ export function bidibExtractSeqNum(message: number[]) {
   let i = 1;
   while (message[i] != 0x00) {
     i++;
+    // console.log('get.seqnum');
   }
   return message[++i];
 }
@@ -59,28 +60,39 @@ export function bidibFirstDataByteIndex(message: number[]) {
 }
 
 export function bidibLogReceivedMessage(message: Uint8Array) {
-  const { type, address, seqnum, payload } = getBidibMssageDetails(message);
+  const { type, address, seqnum, payload } = getBidibMessageDetails(message);
   const hex = (val: number) => val.toString(16);
   // MESSAGE ::= MSG_LENGTH  MSG_ADDR  MSG_NUM  MSG_TYPE  DATA
   const messageType = BIDIB_MESSAGE_TYPES[type];
   console.log(
-    `Received from: 0x${hex(address[0])} 0x${hex(address[1])} 0x${hex(
+    `<< ${logColor(messageType, 'blue')} ${printMessageToHex(
+      payload
+    )} from: 0x${hex(address[0])} 0x${hex(address[1])} 0x${hex(
       address[2]
-    )} 0x${hex(address[3])} seq: ${seqnum} type: ${logColor(
-      messageType,
-      'blue'
-    )} (0x${hex(type)})`
+    )} 0x${hex(address[3])} seq: ${seqnum})`
   );
 
-  console.log(printMessageToHex(payload));
-
   if (type === MSG_SYS_ERROR) {
-    console.log('ERROR: ', getErrorDetails(message));
+    console.log(chalk.bgRed(chalk.white('ERROR: ', getErrorDetails(message))));
   }
 }
 
+export function bidibLogSentMessage(message: Uint8Array | number[]) {
+  const { type, address, seqnum, payload } = getBidibMessageDetails(message);
+  const hex = (val: number) => val.toString(16);
+  // MESSAGE ::= MSG_LENGTH  MSG_ADDR  MSG_NUM  MSG_TYPE  DATA
+  const messageType = BIDIB_MESSAGE_TYPES[type];
+  console.log(
+    `>> ${logColor(messageType, 'redBright')} ${printMessageToHex(
+      Array.from(message)
+    )} to: 0x${hex(address[0])} 0x${hex(address[1])} 0x${hex(
+      address[2]
+    )} 0x${hex(address[3])} seq: ${seqnum})`
+  );
+}
+
 export function getErrorDetails(message: Uint8Array) {
-  const { firstDataByteIndex } = getBidibMssageDetails(message);
+  const { firstDataByteIndex } = getBidibMessageDetails(message);
   const errorType = message[firstDataByteIndex];
 
   let error = 'UNKNOWN';
@@ -100,83 +112,6 @@ export function getErrorDetails(message: Uint8Array) {
   }
 
   return error;
-}
-
-export function bidibMessageWithoutData(addr: NodeAddress, msgType: number) {
-  // Determine message size
-  let messageLength = 0;
-  let addrSize = 0;
-  if (addr[0] == 0x00) {
-    messageLength = 4;
-    addrSize = 1;
-  } else if (addr[1] == 0x00) {
-    messageLength = 5;
-    addrSize = 2;
-  } else if (addr[2] == 0x00) {
-    messageLength = 6;
-    addrSize = 3;
-  } else {
-    messageLength = 7;
-    addrSize = 4;
-  }
-
-  // Build message
-  const message: number[] = [];
-  message[0] = messageLength - 1;
-  for (let i = 1; i <= addrSize; i++) {
-    message[i] = addr[i - 1];
-  }
-  let seqnum = 0x00;
-  // if (bidibSeqNumEnabled) {
-  // 	seqnum = bidibNodeStateGetAndIncrSendSeqnum(addr);
-  // }
-  message[addrSize + 1] = seqnum;
-  message[addrSize + 2] = msgType;
-
-  // Buffer message
-  return message;
-}
-
-export function bidibMessageWithData(
-  addr: NodeAddress,
-  msgType: number,
-  dataLength: number,
-  data: number[]
-) {
-  // Determine message size
-  let messageLength = dataLength;
-  let addrSize = 0;
-  if (addr[0] == 0x00) {
-    messageLength += 4;
-    addrSize = 1;
-  } else if (addr[1] == 0x00) {
-    messageLength += 5;
-    addrSize = 2;
-  } else if (addr[2] == 0x00) {
-    messageLength += 6;
-    addrSize = 3;
-  } else {
-    messageLength += 7;
-    addrSize = 4;
-  }
-
-  // Build message
-  let message: number[] = [];
-  message[0] = messageLength - 1;
-  for (let i = 1; i <= addrSize; i++) {
-    message[i] = addr[i - 1];
-  }
-  let seqnum = 0x00;
-  // if (bidibSeqNumEnabled) {
-  // 	seqnum = bidib_node_state_get_and_incr_send_seqnum(addr);
-  // }
-  message[addrSize + 1] = seqnum;
-  message[addrSize + 2] = msgType;
-  for (let i = 0; i < dataLength; i++) {
-    message[addrSize + 3 + i] = data[i];
-  }
-
-  return message;
 }
 
 export function getUID(payload: number[], firstDataByteIndex: number) {
@@ -206,13 +141,14 @@ function bidibSendByte(b: number) {
   message.push(b);
 }
 
-async function wait(waitTimeMS: number) {
+export async function wait(waitTimeMS: number) {
+  console.log(`Waiting for ${waitTimeMS}ms`);
   return new Promise((resolve) => {
     setTimeout(resolve, waitTimeMS);
   });
 }
 
-function getCRC(message: number[]) {
+export function getCRC(message: number[]) {
   let crc = 0;
   for (let i = 0; i < message.length; i++) {
     crc = BIDIB_CRC_ARRAY[message[i] ^ crc];
@@ -220,28 +156,7 @@ function getCRC(message: number[]) {
   return crc;
 }
 
-export function sendMessagesWithoutData(
-  addr: NodeAddress,
-  messageCodes: number[]
-) {
-  for (const messageCode of messageCodes) {
-    switch (messageCode) {
-      default:
-        {
-          const message = bidibMessageWithoutData(addr, messageCode);
-          sendMessage(message);
-          const crc = getCRC(message);
-          sendMessage([crc]);
-        }
-        break;
-      case BIDIB_PKT_MAGIC:
-        sendMessage([BIDIB_PKT_MAGIC]);
-        break;
-    }
-  }
-}
-
-export function getBidibMssageDetails(message: Uint8Array) {
+export function getBidibMessageDetails(message: Uint8Array | number[]) {
   const payload = Array.from(message);
   const type = bidibExtractMsgType(payload);
   const address = bidibExtractAddress(payload);
