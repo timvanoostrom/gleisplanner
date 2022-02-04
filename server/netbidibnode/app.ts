@@ -1,51 +1,109 @@
-import { CS_NODE_ADDRESS } from './config';
+import { printMessageToHex } from '../helpers';
+import { BidibMessage, CS_NODE_ADDRESS } from './config';
 import {
-  BidibCsState,
-  handleBidibControlStationMessage,
-  sendCsState,
-} from './messages/control-station';
+  localLinkHandler,
+  localLogonHandler,
+  localLogonRejectedHandler,
+  protocolSignatureHandler,
+} from './messages/netbidib';
+import { sendBidibControlStationStartup } from './messages/system-startup';
 import {
-  handleBidibControlStationStartupMessage,
-  sendBidibControlStationStartup,
-} from './messages/system-startup';
-import { getSerialParser, openSerialPort } from './serial-device';
-import { bidibLogReceivedMessage } from './utils';
+  createNetMessageHandler,
+  isPaired,
+  NetMessageHandlerCombo,
+  netSend,
+  startNetBidibServer,
+} from './netbidib-receiver';
+import { BidibSerialLink, Us_BidibSystem } from './protocol';
+import {
+  bidibMessageWithData,
+  openSerialPort,
+  sendMessagesWithoutData,
+} from './serial-device';
+import { createSerialMessageHandler } from './serial-queue';
+import {
+  BidibMessageDetails,
+  getBidibMessageDetails,
+  getBidibMessageType,
+  getCRC,
+  prepareNetMessageFromSerial,
+} from './utils';
 // import { bidibLogReceivedMessage, getBidibMessageDetails, wait } from './utils';
 
-function onBidibUplinkMessage(message: Uint8Array) {
-  // MESSAGE ::= MSG_LENGTH  MSG_ADDR  MSG_NUM  MSG_TYPE  DATA
-  // MSG_LENGTH ::= 0x00 | … | 0x7f
-  // MSG_ADDR ::= MSG_ADDR_STACK  0x00
-  // MSG_ADDR_STACK ::= ε | NODE_ADDR  MSG_ADDR_STACK
-  // NODE_ADDR ::= 0x01 | … | 0xff
-  // MSG_NUM ::= 0x00 | … | 0xff
-  // MSG_TYPE ::= 0x00 | … | 0xff
-  // DATA ::= ε | ANY_BYTE  DATA
-  // ANY_BYTE ::= 0x00 | … | 0xff
+// function onBidibUplinkMessage(message: Uint8Array) {
+//   // MESSAGE ::= MSG_LENGTH  MSG_ADDR  MSG_NUM  MSG_TYPE  DATA
+//   // MSG_LENGTH ::= 0x00 | … | 0x7f
+//   // MSG_ADDR ::= MSG_ADDR_STACK  0x00
+//   // MSG_ADDR_STACK ::= ε | NODE_ADDR  MSG_ADDR_STACK
+//   // NODE_ADDR ::= 0x01 | … | 0xff
+//   // MSG_NUM ::= 0x00 | … | 0xff
+//   // MSG_TYPE ::= 0x00 | … | 0xff
+//   // DATA ::= ε | ANY_BYTE  DATA
+//   // ANY_BYTE ::= 0x00 | … | 0xff
 
-  console.log('\n');
-  bidibLogReceivedMessage(message);
-  handleBidibControlStationStartupMessage(message);
-  handleBidibControlStationMessage(message);
-}
+//   console.log('\n');
+//   const payload = Array.from(message);
+//   bidibLogReceivedMessage(payload);
+//   handleBidibControlStationStartupMessage(payload);
+//   // handleBidibNodeTabMessage(message);
+//   // handleBidibControlStationMessage(message);
+// }
 
 (async function start() {
-  const serialport = await openSerialPort();
-  const parser = getSerialParser();
+  const { port: serialport, parser: serialParser } = await openSerialPort();
 
-  if (!serialport || !parser) {
-    console.error('Could not open serial port');
-    process.exit(1);
-  } else {
+  if (serialport) {
     serialport.on('error', function (err) {
       console.log('Error: ', err.message);
     });
-    parser.on('data', (message) => {
-      onBidibUplinkMessage(message);
-    });
+
+    function pass2Net(message: BidibMessage) {
+      if (isPaired) {
+        const details = getBidibMessageDetails(message);
+
+        console.log(
+          'From serial',
+          getBidibMessageType(details.type),
+          printMessageToHex(message),
+          details
+        );
+
+        const netMessage = prepareNetMessageFromSerial(details.payload);
+        netSend(netMessage);
+      }
+    }
+
+    const onData = createSerialMessageHandler(pass2Net);
+
+    serialParser.on('data', onData);
 
     sendBidibControlStationStartup(CS_NODE_ADDRESS);
+
     // await wait(500);
+    // sendBidibNodeTabGetAll(CS_NODE_ADDRESS);
+    // await wait(500);
+    // sendBidibNodeTabGetNext(CS_NODE_ADDRESS, 2);
     // sendCsState(CS_NODE_ADDRESS, BidibCsState.BIDIB_CS_STATE_OFF);
+  }
+
+  const { socket: netSocket } = await startNetBidibServer();
+
+  function pass2Serial(messageDetails: BidibMessageDetails) {
+    if (isPaired) {
+      sendMessagesWithoutData(CS_NODE_ADDRESS, [messageDetails.type]);
+      // serialport.write(Buffer.from(messageDetails.payload));
+    }
+  }
+
+  if (netSocket) {
+    const handlers: NetMessageHandlerCombo[] = [
+      protocolSignatureHandler,
+      localLinkHandler,
+      localLogonHandler,
+      localLogonRejectedHandler,
+    ];
+
+    const onData = createNetMessageHandler(pass2Serial, ...handlers);
+    netSocket.on('data', onData);
   }
 })();

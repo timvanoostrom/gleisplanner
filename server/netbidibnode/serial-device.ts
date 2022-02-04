@@ -1,14 +1,14 @@
 import SerialPort from 'serialport';
 import { printMessageToHex } from '../helpers';
-import { NodeAddress } from './config';
-import { BIDIB_PKT_MAGIC } from './protocol';
+import { BidibMessage, BidibMessageType, NodeAddress } from './config';
+import { BidibSerialLink } from './protocol';
 import { bidibLogSentMessage, getCRC } from './utils';
 
 export const Delimiter = require('@serialport/parser-delimiter');
 const path = '/dev/tty.usbserial-AH05R7PP';
 
 let serialport: SerialPort | null = null;
-let parser: NodeJS.WritableStream | null = null;
+let serialparser: NodeJS.WritableStream | null = null;
 
 const DEFAULT_SERIAL_PORT_OPTIONS = {
   baudRate: 115200,
@@ -16,24 +16,30 @@ const DEFAULT_SERIAL_PORT_OPTIONS = {
 
 export function openSerialPort(
   options: Record<string, any> = DEFAULT_SERIAL_PORT_OPTIONS
-): Promise<SerialPort | null> {
-  return new Promise((resolve, reject) => {
-    const port = new SerialPort(path, options);
-    parser = port.pipe(new Delimiter({ delimiter: [BIDIB_PKT_MAGIC] }));
+) {
+  return new Promise<{ port: SerialPort; parser: NodeJS.WritableStream }>(
+    (resolve, reject) => {
+      const port = new SerialPort(path, options);
 
-    port.on('open', function () {
-      port.update(options);
+      const parser = port.pipe(
+        new Delimiter({ delimiter: [BidibSerialLink.BIDIB_PKT_MAGIC] })
+      );
 
-      console.log('port open', port.isOpen, 'baudrate', port.baudRate);
+      port.on('open', function () {
+        port.update(options);
 
-      if (port.isOpen) {
-        serialport = port;
-        resolve(serialport);
-      } else {
-        reject(serialport);
-      }
-    });
-  });
+        console.log('[SYS] port open', port.isOpen, 'baudrate', port.baudRate);
+
+        if (port.isOpen) {
+          serialport = port;
+          serialparser = parser;
+          resolve({ port, parser });
+        } else {
+          reject('[SYS] Some reason to reject serial connection.....???');
+        }
+      });
+    }
+  );
 }
 
 export function getSerialPort() {
@@ -41,26 +47,30 @@ export function getSerialPort() {
 }
 
 export function getSerialParser() {
-  return parser;
+  return serialparser;
 }
 
-export function sendMessage(message: number[] | number) {
+export function sendMessage(message: BidibMessage | BidibMessageType) {
   message = Array.isArray(message) ? message : [message];
   const port = getSerialPort();
+
   if (!port) {
     console.error('No serial port found.');
     return;
   }
-  const messageBuffer = Buffer.from(message);
+
   if (message.length >= 4) {
-    bidibLogSentMessage(messageBuffer);
+    bidibLogSentMessage(message);
   } else {
     console.log('>>', printMessageToHex(message));
   }
-  port.write(messageBuffer);
+
+  port.write(Buffer.from(message));
 }
 
-export function sendMessages(...messages: Array<number[] | number>) {
+export function sendMessages(
+  ...messages: Array<BidibMessage | BidibMessageType>
+) {
   for (const message of messages) {
     sendMessage(message);
   }
@@ -68,7 +78,10 @@ export function sendMessages(...messages: Array<number[] | number>) {
 
 let seqnum = 0x00;
 
-export function bidibMessageWithoutData(addr: NodeAddress, msgType: number) {
+export function bidibMessageWithoutData(
+  addr: NodeAddress,
+  msgType: BidibMessageType
+) {
   // Determine message size
   let messageLength = 0;
   let addrSize = 0;
@@ -106,7 +119,7 @@ export function bidibMessageWithoutData(addr: NodeAddress, msgType: number) {
 
 export function sendMessagesWithoutData(
   addr: NodeAddress,
-  messageCodes: number[]
+  messageCodes: BidibMessageType[]
 ) {
   for (const messageType of messageCodes) {
     console.log('\n');
@@ -115,11 +128,11 @@ export function sendMessagesWithoutData(
         {
           const message = bidibMessageWithoutData(addr, messageType);
           const crc = getCRC(message);
-          sendMessages(message, crc, BIDIB_PKT_MAGIC);
+          sendMessages(message, crc, BidibSerialLink.BIDIB_PKT_MAGIC);
         }
         break;
-      case BIDIB_PKT_MAGIC:
-        sendMessage(BIDIB_PKT_MAGIC);
+      case BidibSerialLink.BIDIB_PKT_MAGIC:
+        sendMessage(BidibSerialLink.BIDIB_PKT_MAGIC);
         break;
     }
   }
@@ -127,12 +140,11 @@ export function sendMessagesWithoutData(
 
 export function bidibMessageWithData(
   addr: NodeAddress,
-  msgType: number,
-  dataLength: number,
+  msgType: BidibMessageType,
   data: number[]
-) {
+): BidibMessage {
   // Determine message size
-  let messageLength = dataLength;
+  let messageLength = data.length;
   let addrSize = 0;
   if (addr[0] == 0x00) {
     messageLength += 4;
@@ -151,6 +163,7 @@ export function bidibMessageWithData(
   // Build message
   let message: number[] = [];
   message[0] = messageLength - 1;
+
   for (let i = 1; i <= addrSize; i++) {
     message[i] = addr[i - 1];
   }
@@ -160,7 +173,7 @@ export function bidibMessageWithData(
   message[addrSize + 1] = seqnum;
   message[addrSize + 2] = msgType;
 
-  for (let i = 0; i < dataLength; i++) {
+  for (let i = 0; i < data.length; i++) {
     message[addrSize + 3 + i] = data[i];
   }
 
@@ -169,25 +182,20 @@ export function bidibMessageWithData(
 
 export function sendMessagesWithData(
   addr: NodeAddress,
-  messageCodes: Array<number[]>
+  messageTypes: BidibMessage[]
 ) {
-  for (const [messageType, ...messageData] of messageCodes) {
+  for (const [messageType, ...messageData] of messageTypes) {
     console.log('\n');
     switch (messageType) {
       default:
         {
-          const message = bidibMessageWithData(
-            addr,
-            messageType,
-            messageData.length,
-            messageData
-          );
+          const message = bidibMessageWithData(addr, messageType, messageData);
           const crc = getCRC(message);
-          sendMessages(message, crc, BIDIB_PKT_MAGIC);
+          sendMessages(message, crc, BidibSerialLink.BIDIB_PKT_MAGIC);
         }
         break;
-      case BIDIB_PKT_MAGIC:
-        sendMessage(BIDIB_PKT_MAGIC);
+      case BidibSerialLink.BIDIB_PKT_MAGIC:
+        sendMessage(BidibSerialLink.BIDIB_PKT_MAGIC);
         break;
     }
   }

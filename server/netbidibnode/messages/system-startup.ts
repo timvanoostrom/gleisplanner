@@ -1,72 +1,101 @@
-import { NodeAddress } from '../config';
+import { hexToString } from '../../helpers';
+import { BidibMessage, NodeAddress } from '../config';
 import {
-  BIDIB_PKT_MAGIC,
-  MSG_NODETAB_COUNT,
-  MSG_NODETAB_GETALL,
-  MSG_SYS_ENABLE,
-  MSG_SYS_GET_MAGIC,
-  MSG_SYS_GET_P_VERSION,
-  MSG_SYS_GET_SW_VERSION,
-  MSG_SYS_GET_UNIQUE_ID,
-  MSG_SYS_P_VERSION,
-  MSG_SYS_SW_VERSION,
-  MSG_SYS_UNIQUE_ID,
+  serialInterfaceDescriptor,
+  setDescriptorValue,
+} from '../connection-registry';
+import {
+  BidibSerialLink,
+  Ds_BidibSystem,
+  NetBidibLocalLink,
+  Us_BidibSystem,
 } from '../protocol';
-import { sendMessagesWithoutData } from '../serial-device';
-import { getBidibMessageDetails, getUID, logColor } from '../utils';
+import {
+  addLineItems,
+  lineItemMessageNoReply,
+  lineItemSimpleMessage,
+} from '../serial-queue';
+import {
+  getBidibProtocolVersion,
+  getBidibSerialMessageDetails,
+  getBidibSoftwareVersion,
+  getUID,
+  logColor,
+} from '../utils';
 
 export function sendBidibControlStationStartup(nodeAddress: NodeAddress) {
-  sendMessagesWithoutData(nodeAddress, [
-    BIDIB_PKT_MAGIC,
-    BIDIB_PKT_MAGIC,
-    MSG_SYS_GET_MAGIC,
-    MSG_SYS_GET_UNIQUE_ID,
-    MSG_SYS_GET_P_VERSION,
-    MSG_SYS_GET_SW_VERSION,
-    MSG_NODETAB_GETALL,
-    MSG_SYS_ENABLE,
-  ]);
+  addLineItems(
+    lineItemMessageNoReply(nodeAddress, BidibSerialLink.BIDIB_PKT_MAGIC),
+    lineItemMessageNoReply(nodeAddress, BidibSerialLink.BIDIB_PKT_MAGIC),
+    lineItemSimpleMessage(
+      nodeAddress,
+      Ds_BidibSystem.MSG_SYS_GET_MAGIC,
+      Us_BidibSystem.MSG_SYS_MAGIC
+    ),
+    lineItemSimpleMessage(
+      nodeAddress,
+      Ds_BidibSystem.MSG_SYS_GET_UNIQUE_ID,
+      Us_BidibSystem.MSG_SYS_UNIQUE_ID,
+      handleBidibControlStationStartupMessage
+    ),
+    lineItemSimpleMessage(
+      nodeAddress,
+      Ds_BidibSystem.MSG_SYS_GET_P_VERSION,
+      Us_BidibSystem.MSG_SYS_P_VERSION,
+      handleBidibControlStationStartupMessage
+    ),
+    lineItemSimpleMessage(
+      nodeAddress,
+      Ds_BidibSystem.MSG_SYS_GET_SW_VERSION,
+      Us_BidibSystem.MSG_SYS_SW_VERSION,
+      handleBidibControlStationStartupMessage
+    )
+    // lineItemSimpleMessage(
+    //   nodeAddress,
+    //   NetBidibLocalLink.BIDIB_LINK_DESCRIPTOR_PROD_STRING,
+    //   NetBidibLocalLink.BIDIB_LINK_DESCRIPTOR_PROD_STRING,
+    //   handleBidibControlStationStartupMessage
+    // )
+  )();
 }
 
-export function handleBidibControlStationStartupMessage(
-  message: Uint8Array | null
-) {
-  if (!message) {
-    return;
-  }
-  const { type, payload, firstDataByteIndex } = getBidibMessageDetails(message);
+export function handleBidibControlStationStartupMessage(message: BidibMessage) {
+  const messageDetails = getBidibSerialMessageDetails(message);
+  const { type: messageType } = messageDetails;
 
-  switch (type) {
-    case MSG_SYS_UNIQUE_ID:
-      // 1:class, 2:classx, 3:vid, 4..7:pid+uid, [7..11: config_fingerprint]
-      console.log(
-        'GOT THE ID YEAH!',
-        logColor(getUID(payload, firstDataByteIndex))
-      );
+  switch (messageType) {
+    case Us_BidibSystem.MSG_SYS_UNIQUE_ID:
+      {
+        const uid = getUID(messageDetails);
+        console.log('GOT THE ID YEAH!', logColor(uid));
+        setDescriptorValue('uid', messageDetails.data);
+      }
       break;
-    case MSG_SYS_P_VERSION:
-      const protocolVersion = payload
-        .slice(firstDataByteIndex, firstDataByteIndex + 2)
-        .reverse()
-        .join('.');
-
-      console.log(`And the Protocol version is...${logColor(protocolVersion)}`);
+    case Us_BidibSystem.MSG_SYS_P_VERSION:
+      {
+        const protocolVersion = getBidibProtocolVersion(messageDetails);
+        console.log(
+          `And the Protocol version is...`,
+          logColor(protocolVersion)
+        );
+        setDescriptorValue('pVersion', messageDetails.data);
+      }
       break;
-    case MSG_SYS_SW_VERSION:
-      const softwareVersion = payload
-        .slice(firstDataByteIndex, firstDataByteIndex + 3)
-        .map((n, i) => {
-          return i === 0 ? `V${n}` : `${n}`.padStart(2, '0');
-        })
-        .join('.');
-
-      console.log('And the Software version is...', logColor(softwareVersion));
+    case Us_BidibSystem.MSG_SYS_SW_VERSION:
+      {
+        const softwareVersion = getBidibSoftwareVersion(messageDetails);
+        console.log(
+          'And the Software version is...',
+          logColor(softwareVersion)
+        );
+        setDescriptorValue('swVersion', messageDetails.data);
+        console.log(serialInterfaceDescriptor);
+      }
       break;
-    case MSG_NODETAB_COUNT:
-      console.log(
-        'And the Node count is...',
-        logColor(`${payload[firstDataByteIndex]}`)
-      );
+    case NetBidibLocalLink.BIDIB_LINK_DESCRIPTOR_PROD_STRING:
+      {
+        console.log('LINK!', hexToString(messageDetails.data));
+      }
       break;
   }
 }
