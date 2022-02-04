@@ -3,7 +3,6 @@
   import { derived } from 'svelte/store';
   import { patternSelectedGleis } from './config/svg-fill-patterns';
   import GridLines from './GridLines.svelte';
-  import { getTransform } from './helpers/svg';
   import { layerPatterns } from './store/layerControl';
   import { availableSpaceElement, baseGroup, planeSvg } from './store/plane';
   import {
@@ -12,31 +11,26 @@
     scale,
     setViewBoxTranslation,
     svgCoords,
+    tools,
     viewBoxTranslation,
   } from './store/workspace';
+  import ZoomTool from './ZoomTool.svelte';
 
   const viewBoxTranslationInitial = $viewBoxTranslation;
 
   let isDragActive: boolean = false;
-  let svg: SVGSVGElement;
   let anchorPoint;
 
-  planeSvg.subscribe((svgElement) => (svg = svgElement));
+  $: isDragTranslateBlocked = $tools.zoom;
 
-  const transform = derived(scale, (scale) => {
+  const scaleTransformAttribute = derived(scale, (scale) => {
     const base = $baseGroup;
 
     if (!base) {
       return `scale(${scale})`;
     }
 
-    const attr = getTransform(base.transform.baseVal);
-
-    attr.scale.value = scale;
-
-    const attrString = Object.values(attr)
-      .map((attr) => attr.s)
-      .join(' ');
+    const attrString = `scale(${scale})`;
 
     return attrString;
   });
@@ -54,21 +48,25 @@
   }, 100);
 
   function shiftViewBox(deltaX: number, deltaY: number) {
-    svg.viewBox.baseVal.x += deltaX;
-    svg.viewBox.baseVal.y += deltaY;
-    saveViewboxTranslation(svg.viewBox.baseVal.x, svg.viewBox.baseVal.y);
+    console.log($planeSvg.viewBox.baseVal);
+    $planeSvg.viewBox.baseVal.x += deltaX;
+    $planeSvg.viewBox.baseVal.y += deltaY;
+    saveViewboxTranslation(
+      $planeSvg.viewBox.baseVal.x,
+      $planeSvg.viewBox.baseVal.y
+    );
   }
 
   const startDragTranslate = (event) => {
-    if (event.currentTarget === svg) {
+    if (event.currentTarget === $planeSvg) {
       isDragActive = true;
-      anchorPoint = svgCoords(event, svg);
+      anchorPoint = svgCoords(event, $planeSvg);
     }
   };
 
   const doDragTranslate = (event: MouseEvent) => {
     if (isDragActive) {
-      const targetPoint = svgCoords(event, svg);
+      const targetPoint = svgCoords(event, $planeSvg);
       shiftViewBox(
         anchorPoint.x - targetPoint.x,
         anchorPoint.y - targetPoint.y
@@ -83,19 +81,19 @@
   };
 
   const startDrag = (event) => {
-    if (!event.metaKey) {
+    if (!event.metaKey && !isDragTranslateBlocked) {
       startDragTranslate(event);
     }
   };
 
   const doDrag = (event: MouseEvent) => {
-    if (!event.metaKey) {
+    if (!event.metaKey && !isDragTranslateBlocked) {
       doDragTranslate(event);
     }
   };
 
   const endDrag = (event) => {
-    if (!event.metaKey) {
+    if (!event.metaKey && !isDragTranslateBlocked) {
       endDragTranslate(event);
     }
   };
@@ -122,7 +120,7 @@
       bind:this={$baseGroup}
       id="gleis-base-group"
       class="ScaleSpace"
-      transform={$transform}
+      transform={$scaleTransformAttribute}
     >
       <rect
         bind:this={$availableSpaceElement}
@@ -137,6 +135,14 @@
 
       <circle r={10} fill="blue" cx={0} cy={0} />
       <slot />
+      {#if $tools.zoom}
+        <ZoomTool
+          x={-$dimensions.width / 2}
+          y={-$dimensions.height / 2}
+          width={$dimensions.width}
+          height={$dimensions.height}
+        />
+      {/if}
     </g>
   </svg>
 </div>

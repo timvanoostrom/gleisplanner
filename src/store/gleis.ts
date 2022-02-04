@@ -478,11 +478,18 @@ export function findConnectingGleis(
   point: Point,
   cid?: GleisPropsPlanned['id']
 ): GleisPropsPlanned | undefined {
+  return findConnection(get(gleisPlannedDB), point, cid);
+}
+
+export function findConnection(
+  gleisAll: GleisPlanned,
+  point: Point,
+  cid?: GleisPropsPlanned['id']
+): GleisPropsPlanned | undefined {
   const ids = getConnectedPoint(point);
   if (!ids) {
     return;
   }
-  const gleisAll = get(gleisPlannedDB);
   const [connectingId] = ids.filter((id) => !cid || id !== cid);
   return connectingId ? gleisAll[connectingId] : undefined;
 }
@@ -714,3 +721,5 @@ export const slopesSelected = derived(
       });
   }
 );
+
+export const gleisBezetz = writable<string[]>([]);

@@ -6,11 +6,14 @@
   import {
     connectGleis,
     getCoordString,
+    gleisBezetz,
     gleisIdsActive,
     gleisPlanned as gleisPlannedBbyId,
+    gleisPlannedUnselectedByLayerId,
     pointConnections,
     protoGleisActive,
   } from './store/gleis';
+  import { layerControl } from './store/layerControl';
 
   import type { GleisPropsPlanned, Point, ProtoSegmentFlex } from './types';
 
@@ -75,6 +78,7 @@
       {#each gleisPoints(gleisProps) as point (point)}
         <Handle
           {point}
+          label={point.type}
           on:connect={(event) => connectGleisToPoint(event, event.detail)}
         />
       {/each}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { afterUpdate } from 'svelte';
   import Button from './Button.svelte';
   import { trackLibByArtNr } from './config/trackLib';
   import ConnectionPane from './ConnectionPane.svelte';
@@ -26,6 +27,9 @@
   import SlopeInfo from './SlopeInfo.svelte';
   import { initializers } from './store/appConfig';
   import {
+    findConnection,
+    getCoordString,
+    gleisBezetz,
     gleisIdsActive,
     gleisPlannedSelected,
     gleisPlannedSelectedByLayerId,
@@ -33,13 +37,15 @@
     isCutPathActive,
     singleFlexActive,
   } from './store/gleis';
+  import { layerControl } from './store/layerControl';
   import {
-    measureToolEnabled,
-    guidesToolEnabled,
-    slopesByLayerId,
-    guidesToolShapeType,
-    fillDialogActive,
     activeGuide,
+    fillDialogActive,
+    guidesToolShapeType,
+    isAnyToolEnabled,
+    slopesByLayerId,
+    toggleTool,
+    tools,
   } from './store/workspace';
   import TrackLibControl from './TrackLibControl.svelte';
 
@@ -49,20 +55,54 @@
 
   Promise.all(initializers).then(() => (isLoading = false));
 
-  $: isGleisModeActive = !$measureToolEnabled && !$guidesToolEnabled;
+  $: isGleisModeActive = !isAnyToolEnabled();
+  $: gleisz = $gleisPlannedUnselectedByLayerId[
+    $layerControl.activeLayerId
+  ]?.reduce((acc, gleisProps) => {
+    return Object.assign(acc, { [gleisProps.id]: gleisProps });
+  }, {});
 
-  function toggleTool(name: 'measure' | 'guides') {
-    switch (name) {
-      case 'measure':
-        measureToolEnabled.update((measureToolEnabled) => !measureToolEnabled);
-        guidesToolEnabled.set(false);
-        break;
-      case 'guides':
-        guidesToolEnabled.update((guidesToolEnabled) => !guidesToolEnabled);
-        measureToolEnabled.set(false);
-        break;
-    }
+  let bezetzInterval;
+  let activeBezetzId;
+  let ids;
+  let nextPoint;
+
+  function higlight() {
+    let i = 0;
+
+    bezetzInterval = setInterval(() => {
+      const connectedGleis = findConnection(gleisz, nextPoint, activeBezetzId);
+      if (connectedGleis && connectedGleis.id !== activeBezetzId) {
+        const { points, id, type } = connectedGleis;
+        const coordStringNextPoint = getCoordString(nextPoint);
+        nextPoint = points.find((p) => {
+          const coordString = getCoordString(p);
+          return (
+            coordString !== coordStringNextPoint &&
+            ['c1', 'c2'].includes(p.type)
+          );
+        });
+        activeBezetzId = connectedGleis.id;
+        gleisBezetz.set([activeBezetzId]);
+      } else {
+        clearInterval(bezetzInterval);
+      }
+      i++;
+      if (i == ids.length - 1) {
+        clearInterval(bezetzInterval);
+      }
+    }, 400);
   }
+
+  afterUpdate(() => {
+    if (gleisz && !bezetzInterval) {
+      ids = Object.keys(gleisz);
+      activeBezetzId = ids[0];
+      nextPoint = gleisz[activeBezetzId].points[1];
+      gleisBezetz.set([activeBezetzId]);
+      higlight();
+    }
+  });
 </script>
 
 <main class="App" class:isLoading>
@@ -75,15 +115,12 @@
       <GleisConfig />
       <ControlMenuPanel title="Tools">
         <Button
-          isActive={$measureToolEnabled}
+          isActive={$tools.measure}
           on:click={() => toggleTool('measure')}
         >
           Measure line
         </Button>
-        <Button
-          isActive={$guidesToolEnabled}
-          on:click={() => toggleTool('guides')}
-        >
+        <Button isActive={$tools.guides} on:click={() => toggleTool('guides')}>
           Guides
         </Button>
         {#if $gleisPlannedSelected?.[0]?.type === 'Flex'}
@@ -94,7 +131,7 @@
             Cut path
           </Button>
         {/if}
-        {#if $guidesToolEnabled}
+        {#if $tools.guides}
           {#each ['line', 'rect'] as type}
             <Button
               isActive={$guidesToolShapeType === type}
@@ -108,6 +145,9 @@
             on:click={() => fillDialogActive.set(true)}>Fill</Button
           >
         {/if}
+        <Button isActive={$tools.zoom} on:click={() => toggleTool('zoom')}>
+          Zoom
+        </Button>
       </ControlMenuPanel>
     </div>
   </header>

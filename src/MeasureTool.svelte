@@ -1,7 +1,7 @@
 <script lang="ts">
   import throttle from 'lodash.throttle';
   import { getMidPoint, lineDistance } from './helpers/geometry';
-  import { dimensions, measureToolEnabled, svgCoords } from './store/workspace';
+  import { dimensions, svgCoords, tools } from './store/workspace';
 
   let measureToolRef;
 
@@ -13,7 +13,7 @@
   $: center = p1 && p2Active && getMidPoint(p1.x, p1.y, p2Active.x, p2Active.y);
 
   function setPoint(event: MouseEvent) {
-    if ($measureToolEnabled) {
+    if ($tools.measure) {
       if (p1 && p2) {
         p1 = null;
         p2 = null;
@@ -28,7 +28,7 @@
   }
 
   function moveEndPoint(event: MouseEvent) {
-    if ($measureToolEnabled && p1 && !p2) {
+    if ($tools.measure && p1 && !p2) {
       try {
         const point = svgCoords(event, measureToolRef);
         if (event.shiftKey && p2Move) {
@@ -48,7 +48,7 @@
 </script>
 
 <svelte:window on:click={(event) => setPoint(event)} on:pointermove={move} />
-{#if $measureToolEnabled}
+{#if $tools.measure}
   <rect
     class="MeasurePlane"
     x={-$dimensions.width / 2}

@@ -13,11 +13,11 @@
     dimensions,
     fillDialogActive,
     guidesInLayer,
-    guidesToolEnabled,
     guidesToolShapeType,
     removeGuide,
     selectedGuideId,
     svgCoords,
+    tools,
     updateGuide,
   } from './store/workspace';
   import type { Guide, Point } from './types';
@@ -123,7 +123,7 @@
   }
 
   function onKeydownRouter(event) {
-    if ($guidesToolEnabled) {
+    if ($tools.guides) {
       switch (event.key) {
         // case 'a':
         // case 'A':

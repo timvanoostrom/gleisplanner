@@ -1,6 +1,6 @@
 <script lang="ts">
   import GleisBridge from './GleisBridge.svelte';
-  import { gleisIdsActive, setGleisIdActive } from './store/gleis';
+  import { gleisBezetz, gleisIdsActive, setGleisIdActive } from './store/gleis';
   import { layersById } from './store/layerControl';
   import type { GleisPropsPlanned, ProtoGleis } from './types';
 
@@ -11,6 +11,8 @@
   $: isActive = $gleisIdsActive.includes(gleisProps.id);
   $: gleisLayerPatternId = $layersById[gleisProps.layerId]?.patternId || '';
   $: gleisFillColor = $layersById[gleisProps.layerId]?.color || 'red';
+
+  $: isBezets = $gleisBezetz.includes(gleisProps.id);
 </script>
 
 <g
@@ -19,6 +21,7 @@
   class:isActive
   class:hasTunnel={!!gleisProps?.config?.tunnel}
   class:hasBridge={!!gleisProps?.config?.bridge}
+  class:bezetz={isBezets}
   on:click={(event) => {
     if (!disabled) {
       event.stopPropagation();
@@ -86,5 +89,10 @@
   }
   .hasTunnel .spath {
     opacity: 0.4;
+  }
+  .bezetz .spath {
+    stroke-opacity: 1;
+    stroke: purple;
+    stroke-width: 2px;
   }
 </style>

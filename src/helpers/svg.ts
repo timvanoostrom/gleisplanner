@@ -5,59 +5,6 @@ interface Point {
   y: number;
 }
 
-interface SVGTransFormAttr {
-  scale: { value: number; s: string };
-  translate: { value: Point; s: string };
-  rotate: { value: number; s: string };
-}
-
-export function getTransform(
-  transformList: SVGTransformList
-): SVGTransFormAttr {
-  const attr = {} as SVGTransFormAttr;
-  for (var i = 0; i < transformList.numberOfItems; i++) {
-    var transform = transformList.getItem(i);
-    var m = transform.matrix;
-
-    switch (true) {
-      case transform.type === 2:
-        attr.translate = {
-          value: { x: m.e, y: m.f },
-          get s() {
-            return `translate(${this.value.x},${this.value.y})`;
-          },
-        };
-        break;
-      case transform.type === 3:
-        attr.scale = {
-          value: m.a,
-          get s() {
-            return `scale(${this.value})`;
-          },
-        };
-        break;
-      case transform.type === 4:
-        attr.rotate = {
-          value: transform.angle,
-          s: `rotate(${transform.angle})`,
-        };
-        // TODO need to also handle rotate(angle, x, y) form
-        break;
-      case transform.type === 5:
-        // TODO skewX()
-        break;
-      case transform.type === 6:
-        // TODO skewY(()
-        break;
-      case transform.type === 1:
-      default:
-        // return [m.a ,m.b ,m.c ,m.d ,m.e ,m.f];
-        break;
-    }
-  }
-  return attr;
-}
-
 export function applyMatrixToPoint(
   svgRoot: SVGSVGElement,
   element: SVGGeometryElement,

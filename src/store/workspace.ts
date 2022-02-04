@@ -216,10 +216,40 @@ export const sidebarState = appConfigValue('sidebarState');
 export const guides = db<Guides>('guides', []);
 export const slopes = db<Slopes>('slopes', {});
 
-export const measureToolEnabled = writable(false);
 export const guidesToolShapeType = writable('line');
-export const guidesToolEnabled = writable(false);
+
 export const fillDialogActive = writable(false);
+
+type ZoomToolName = 'measure' | 'guides' | 'zoom';
+
+export const tools = writable<Record<ZoomToolName, boolean>>({
+  measure: false,
+  guides: false,
+  zoom: false,
+});
+
+export function disableAllButTools(toolName: ZoomToolName) {
+  tools.update((tools) => {
+    for (const [name, tool] of Object.entries(tools).filter(
+      ([name]) => name !== toolName
+    )) {
+      tools[name] = false;
+    }
+    return tools;
+  });
+}
+
+export function toggleTool(name: ZoomToolName) {
+  tools.update((tools) => {
+    tools[name] = !tools[name];
+    return tools;
+  });
+  disableAllButTools(name);
+}
+
+export function isAnyToolEnabled() {
+  return Object.values(get(tools)).some((enabled) => enabled);
+}
 
 export const slopesCalculated = derived(slopes, (slopes) =>
   Object.values(slopes)

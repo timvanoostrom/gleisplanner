@@ -2,7 +2,7 @@
   import GuidePath from './GuidePath.svelte';
   import GuideRect from './GuideRect.svelte';
   import GuidesControl from './GuidesControl.svelte';
-  import { guidesInLayer, guidesToolEnabled } from './store/workspace';
+  import { guidesInLayer, tools } from './store/workspace';
   import type { Point } from './types';
 
   function points(points: Point[]) {
@@ -11,7 +11,7 @@
 </script>
 
 <g class="Guides">
-  {#if $guidesToolEnabled}
+  {#if $tools.guides}
     <GuidesControl />
   {:else}
     {#each $guidesInLayer as guide}
