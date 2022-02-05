@@ -26,9 +26,12 @@ export const [dimensions, setDimensions] =
 export const [gridSize, setGridSize] = appConfigValue<Dimensions>('gridSize');
 export const [isGridVisible, setGridVisible] =
   appConfigValue<boolean>('gridVisible');
-
 export const [baseGroupTranslation, setViewBoxTranslation] =
   appConfigValue<Point | null>('viewBoxTranslation');
+export const gleisPlanSaved = db<GleisPlanSaved>('gleisPlanSaved', {});
+export const [gleisPlanSavedId, setGleisPlanSavedId] = appConfigValue<string>(
+  'gleisPlanSaveIdSelected'
+);
 
 export const viewBoxTranslation = derived(
   [baseGroupTranslation, dimensions],
@@ -46,23 +49,6 @@ export const viewBoxTranslation = derived(
 
 export const [selectionToolsEnabled, setSelectionToolsEnabled] =
   appConfigValue<boolean>('selectionToolsEnabled');
-
-export const [scale, setScaleValue] = appConfigValue<number>('scale');
-
-export function setScale(scale: number) {
-  if (scale >= MIN_SCALE && scale <= MAX_SCALE) {
-    setScaleValue(scale);
-  } else {
-    throw new Error(
-      `scale must be between ${MIN_SCALE} and ${MAX_SCALE}, ${scale} was provided.`
-    );
-  }
-}
-
-export const gleisPlanSaved = db<GleisPlanSaved>('gleisPlanSaved', {});
-export const [gleisPlanSavedId, setGleisPlanSavedId] = appConfigValue<string>(
-  'gleisPlanSaveIdSelected'
-);
 
 export function loadGleisPlanSaved(id: string) {
   const saved = get(gleisPlanSaved)[id];
@@ -215,9 +201,7 @@ export function svgCoords(
 export const sidebarState = appConfigValue('sidebarState');
 export const guides = db<Guides>('guides', []);
 export const slopes = db<Slopes>('slopes', {});
-
 export const guidesToolShapeType = writable('line');
-
 export const fillDialogActive = writable(false);
 
 type ZoomToolName = 'measure' | 'guides' | 'zoom';

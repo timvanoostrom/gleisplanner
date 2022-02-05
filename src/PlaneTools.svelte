@@ -177,12 +177,8 @@
       setGleisIdsActive([]);
     }
   }
-</script>
 
-<svelte:window
-  on:keydown={onKeyDownRouter}
-  on:dblclick={(event) => onAddGleis(event)}
-  on:pointerup={(event) => {
+  function endDrag(event) {
     if (event.metaKey) {
       endDragSelect(event);
     } else if (
@@ -192,7 +188,13 @@
       onDeselect(event);
     }
     dragAnchor = null;
-  }}
+  }
+</script>
+
+<svelte:window
+  on:keydown={onKeyDownRouter}
+  on:dblclick={(event) => onAddGleis(event)}
+  on:pointerup={endDrag}
   on:pointerdown={startDrag}
   on:pointermove={doDrag}
 />

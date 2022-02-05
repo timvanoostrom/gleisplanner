@@ -19,7 +19,6 @@
   import Plane from './Plane.svelte';
   import PlaneTools from './PlaneTools.svelte';
   import SavesControl from './SavesControl.svelte';
-  import ScaleControl from './ScaleControl.svelte';
   import SelectionTools from './SelectionTools.svelte';
   import ShortCurcuitConnections from './ShortCurcuitConnections.svelte';
   import SideMenu from './SideMenu.svelte';
@@ -67,10 +66,13 @@
   let ids;
   let nextPoint;
 
-  function higlight() {
+  function highlight() {
     let i = 0;
 
     bezetzInterval = setInterval(() => {
+      if (!gleisz) {
+        return;
+      }
       const connectedGleis = findConnection(gleisz, nextPoint, activeBezetzId);
       if (connectedGleis && connectedGleis.id !== activeBezetzId) {
         const { points, id, type } = connectedGleis;
@@ -100,7 +102,7 @@
       activeBezetzId = ids[0];
       nextPoint = gleisz[activeBezetzId].points[1];
       gleisBezetz.set([activeBezetzId]);
-      higlight();
+      highlight();
     }
   });
 </script>
@@ -111,7 +113,6 @@
     <TrackLibControl />
     <div class="PanelGroup">
       <GleisStats />
-      <ScaleControl />
       <GleisConfig />
       <ControlMenuPanel title="Tools">
         <Button

@@ -1,5 +1,6 @@
 <script lang="ts">
   import debounce from 'lodash.debounce';
+  import { afterUpdate } from 'svelte';
   import { derived } from 'svelte/store';
   import { patternSelectedGleis } from './config/svg-fill-patterns';
   import GridLines from './GridLines.svelte';
@@ -8,7 +9,6 @@
   import {
     dimensions,
     isGridVisible,
-    scale,
     setViewBoxTranslation,
     svgCoords,
     tools,
@@ -23,18 +23,6 @@
 
   $: isDragTranslateBlocked = $tools.zoom;
 
-  const scaleTransformAttribute = derived(scale, (scale) => {
-    const base = $baseGroup;
-
-    if (!base) {
-      return `scale(${scale})`;
-    }
-
-    const attrString = `scale(${scale})`;
-
-    return attrString;
-  });
-
   const saveViewboxTranslation = debounce((x: number, y: number) => {
     setViewBoxTranslation((translation) => {
       if (translation === null) {
@@ -48,7 +36,9 @@
   }, 100);
 
   function shiftViewBox(deltaX: number, deltaY: number) {
-    console.log($planeSvg.viewBox.baseVal);
+    if (!$planeSvg?.viewBox?.baseVal) {
+      setViewBoxTranslation({ x: 0, y: 0 });
+    }
     $planeSvg.viewBox.baseVal.x += deltaX;
     $planeSvg.viewBox.baseVal.y += deltaY;
     saveViewboxTranslation(
@@ -116,12 +106,7 @@
       {/each}
       <g>{@html patternSelectedGleis}</g>
     </defs>
-    <g
-      bind:this={$baseGroup}
-      id="gleis-base-group"
-      class="ScaleSpace"
-      transform={$scaleTransformAttribute}
-    >
+    <g bind:this={$baseGroup} id="gleis-base-group">
       <rect
         bind:this={$availableSpaceElement}
         class="AvailableSpace"
@@ -135,14 +120,13 @@
 
       <circle r={10} fill="blue" cx={0} cy={0} />
       <slot />
-      {#if $tools.zoom}
-        <ZoomTool
-          x={-$dimensions.width / 2}
-          y={-$dimensions.height / 2}
-          width={$dimensions.width}
-          height={$dimensions.height}
-        />
-      {/if}
+
+      <ZoomTool
+        x={-$dimensions.width / 2}
+        y={-$dimensions.height / 2}
+        width={$dimensions.width}
+        height={$dimensions.height}
+      />
     </g>
   </svg>
 </div>
@@ -164,9 +148,6 @@
   .AvailableSpace {
     fill: #fff;
     outline: 10px solid goldenrod;
-  }
-
-  .ScaleSpace {
   }
 
   .DragSelectArea {
