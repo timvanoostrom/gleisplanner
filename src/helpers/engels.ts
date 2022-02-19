@@ -34,8 +34,8 @@ export function calculateEngelsPoints({
     variant: variant === 's2' || variant === 's4' ? 's2' : 's1',
   });
 
-  const [p1, p2, p3, p4, lbl, po] = points;
-  const pp = [p1, p2, p3, p4, lbl, po];
+  const [p1, p2, p3, p4, lbl] = points;
+  const pp = [...points];
 
   const spreadAngle1 = toRad(cAngle(p1.x, p1.y, p2.x, p2.y));
   const spreadAngle2 = toRad(cAngle(p3.x, p3.y, p4.x, p4.y));
@@ -83,10 +83,20 @@ export function generateEngelsPaths(
   protos: ProtoSegmentStraight[]
 ): PathSegmentProps[] {
   const [proto1, proto2] = protos;
-  const [st1, st2, st3, st4, stlbl2] = points;
+  const [st1, st2, st3, st4] = points;
 
   const paths1 = generateStraightPaths([st1, st2], proto1);
   const paths2 = generateStraightPaths([st3, st4], proto2);
+
+  const curvePrimaryPath = paths1.find((path) => path.type === 'main');
+  if (curvePrimaryPath) {
+    curvePrimaryPath.gleisType = 'Branch1';
+  }
+
+  const curveSecondaryPath = paths2.find((path) => path.type === 'main');
+  if (curveSecondaryPath) {
+    curveSecondaryPath.gleisType = 'Branch2';
+  }
 
   return sortPaths(paths1, paths2);
 }

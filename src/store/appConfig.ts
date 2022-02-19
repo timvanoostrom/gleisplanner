@@ -6,14 +6,13 @@ export const APP_CONFIG_DEFAULT: AppConfig = {
   dimensions: { width: 5500, height: 2800 }, // 1px = 1mm
   gridSize: { width: 500, height: 500 },
   gridVisible: true,
-  scale: 1,
+  currentZoom: { zoom: 1, pan: { x: 0, y: 0 } },
   protoGleisIdActive: 'roco-42441',
   gleisIdsActive: [],
   viewBoxTranslation: null,
   trackLibQuickSelect: null,
   sidebarState: 'visible',
   activeTrackLibId: 'roco-line',
-  selectionToolsEnabled: false,
 };
 
 export const initializers = [];
@@ -51,6 +50,10 @@ export function db<T>(key: string, initialData: T) {
 }
 
 export const appConfig = db('appConfig', APP_CONFIG_DEFAULT);
+export function isAppConfigReady() {
+  console.log('siiia', initializers);
+  return Promise.all(initializers);
+}
 
 export function appConfigSetting(key: keyof AppConfig) {
   return derived(appConfig, (appConfig) => appConfig[key]);

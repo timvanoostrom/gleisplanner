@@ -67,7 +67,7 @@ export function handleBidibControlStationStartupMessage(message: BidibMessage) {
     case Us_BidibSystem.MSG_SYS_UNIQUE_ID:
       {
         const uid = getUID(messageDetails);
-        console.log('GOT THE ID YEAH!', logColor(uid));
+        console.log('\t- GOT THE ID YEAH!', logColor(uid));
         setDescriptorValue('uid', messageDetails.data);
       }
       break;
@@ -75,7 +75,7 @@ export function handleBidibControlStationStartupMessage(message: BidibMessage) {
       {
         const protocolVersion = getBidibProtocolVersion(messageDetails);
         console.log(
-          `And the Protocol version is...`,
+          `\t- And the Protocol version is...`,
           logColor(protocolVersion)
         );
         setDescriptorValue('pVersion', messageDetails.data);
@@ -85,11 +85,10 @@ export function handleBidibControlStationStartupMessage(message: BidibMessage) {
       {
         const softwareVersion = getBidibSoftwareVersion(messageDetails);
         console.log(
-          'And the Software version is...',
+          '\t- And the Software version is...',
           logColor(softwareVersion)
         );
         setDescriptorValue('swVersion', messageDetails.data);
-        console.log(serialInterfaceDescriptor);
       }
       break;
     case NetBidibLocalLink.BIDIB_LINK_DESCRIPTOR_PROD_STRING:

@@ -9,23 +9,18 @@ import {
 import { sendBidibControlStationStartup } from './messages/system-startup';
 import {
   createNetMessageHandler,
+  startTcpServer,
   isPaired,
   NetMessageHandlerCombo,
   netSend,
-  startNetBidibServer,
 } from './netbidib-receiver';
-import { BidibSerialLink, Us_BidibSystem } from './protocol';
-import {
-  bidibMessageWithData,
-  openSerialPort,
-  sendMessagesWithoutData,
-} from './serial-device';
+import { openSerialPort, sendMessagesWithoutData } from './serial-device';
 import { createSerialMessageHandler } from './serial-queue';
 import {
   BidibMessageDetails,
   getBidibMessageDetails,
   getBidibMessageType,
-  getCRC,
+  logColor,
   prepareNetMessageFromSerial,
 } from './utils';
 // import { bidibLogReceivedMessage, getBidibMessageDetails, wait } from './utils';
@@ -58,18 +53,19 @@ import {
     });
 
     function pass2Net(message: BidibMessage) {
+      const details = getBidibMessageDetails(message);
+      console.log(
+        logColor('S-2-N', 'blueBright'),
+        getBidibMessageType(details.type),
+        printMessageToHex(message)
+        // details
+      );
+
       if (isPaired) {
-        const details = getBidibMessageDetails(message);
-
-        console.log(
-          'From serial',
-          getBidibMessageType(details.type),
-          printMessageToHex(message),
-          details
-        );
-
         const netMessage = prepareNetMessageFromSerial(details.payload);
         netSend(netMessage);
+      } else {
+        console.log('not paairred??S');
       }
     }
 
@@ -86,16 +82,22 @@ import {
     // sendCsState(CS_NODE_ADDRESS, BidibCsState.BIDIB_CS_STATE_OFF);
   }
 
-  const { socket: netSocket } = await startNetBidibServer();
-
   function pass2Serial(messageDetails: BidibMessageDetails) {
     if (isPaired) {
-      sendMessagesWithoutData(CS_NODE_ADDRESS, [messageDetails.type]);
+      console.log(
+        logColor('N-2-S', 'yellowBright'),
+        getBidibMessageType(messageDetails.type),
+        printMessageToHex(messageDetails.payload)
+        // details
+      );
+      sendMessagesWithoutData(messageDetails.address, [messageDetails.type]);
       // serialport.write(Buffer.from(messageDetails.payload));
+    } else {
+      console.log('not paired!?');
     }
   }
 
-  if (netSocket) {
+  startTcpServer((socket) => {
     const handlers: NetMessageHandlerCombo[] = [
       protocolSignatureHandler,
       localLinkHandler,
@@ -104,6 +106,6 @@ import {
     ];
 
     const onData = createNetMessageHandler(pass2Serial, ...handlers);
-    netSocket.on('data', onData);
-  }
+    socket.on('data', onData);
+  });
 })();

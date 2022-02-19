@@ -1,8 +1,20 @@
 <script lang="ts">
+  import { startRouteAt } from './BezetzController';
+
   import GleisBridge from './GleisBridge.svelte';
-  import { gleisBezetz, gleisIdsActive, setGleisIdActive } from './store/gleis';
+  import {
+    getCoordString,
+    gleisBezetz,
+    gleisIdsActive,
+    setGleisIdActive,
+  } from './store/gleis';
   import { layersById } from './store/layerControl';
-  import type { GleisPropsPlanned, ProtoGleis } from './types';
+  import { tools } from './store/workspace';
+  import type {
+    GleisPropsPlanned,
+    PathSegmentProps,
+    ProtoGleis,
+  } from './types';
 
   export let gleisProps: GleisPropsPlanned;
   export let proto: ProtoGleis;
@@ -12,7 +24,14 @@
   $: gleisLayerPatternId = $layersById[gleisProps.layerId]?.patternId || '';
   $: gleisFillColor = $layersById[gleisProps.layerId]?.color || 'red';
 
-  $: isBezets = $gleisBezetz.includes(gleisProps.id);
+  $: isBezets = gleisProps.id in $gleisBezetz;
+  $: addPoints = gleisProps.points.filter((p) => p.type === 'add');
+
+  function isSegmentBezets(segment: PathSegmentProps) {
+    if (isBezets) {
+      return true;
+    }
+  }
 </script>
 
 <g
@@ -25,7 +44,11 @@
   on:click={(event) => {
     if (!disabled) {
       event.stopPropagation();
-      setGleisIdActive(gleisProps.id, event.shiftKey);
+      if ($tools.routeSimulation) {
+        startRouteAt(gleisProps.id);
+      } else {
+        setGleisIdActive(gleisProps.id, event.shiftKey);
+      }
     }
   }}
   style={`--gleis-fill-color:${gleisFillColor};${
@@ -40,9 +63,25 @@
       <GleisBridge {gleisProps} />
     {/if}
     {#each gleisProps.pathSegments as pathSegment, index (pathSegment)}
-      <path d={pathSegment.d.toString()} class={`spath ${pathSegment.type}`} />
+      <path
+        d={pathSegment.d.toString()}
+        class={`spath ${pathSegment.type}`}
+        class:bezets={isSegmentBezets(pathSegment)}
+      />
     {/each}
   {/if}
+  {#if $gleisBezetz?.[gleisProps.id]?.length === 3 && $gleisBezetz[gleisProps.id][1] !== null}
+    <line
+      x1={$gleisBezetz[gleisProps.id][0].x}
+      y1={$gleisBezetz[gleisProps.id][0].y}
+      x2={$gleisBezetz[gleisProps.id][1].x}
+      y2={$gleisBezetz[gleisProps.id][1].y}
+      class="connect"
+    />
+  {/if}
+  {#each addPoints as addPoint}
+    <circle r="5" cx={addPoint.x} cy={addPoint.y} class="AddPoint" />
+  {/each}
 </g>
 
 <style>
@@ -90,9 +129,21 @@
   .hasTunnel .spath {
     opacity: 0.4;
   }
+  .main.bezetz {
+    stroke-opacity: 1;
+    stroke: purple;
+    stroke-width: 10px;
+  }
   .bezetz .spath {
     stroke-opacity: 1;
     stroke: purple;
+    stroke-width: 1px;
+  }
+  .connect {
+    stroke: red;
     stroke-width: 2px;
+  }
+  .AddPoint {
+    fill: red;
   }
 </style>

@@ -5,7 +5,7 @@
   import { GLEISPLAN_NAME_DEFAULT } from './config/constants';
   import ControlMenuPanel from './ControlMenuPanel.svelte';
   import { downloadSvg } from './helpers/svg';
-  import { initializers } from './store/appConfig';
+  import { isAppConfigReady } from './store/appConfig';
   import {
     createNewGleisPlan,
     deleteGleisPlan,
@@ -53,7 +53,7 @@
   $: gleisPlanSavedActive = $gleisPlanSaved[$gleisPlanSavedId];
 
   onMount(() => {
-    Promise.all(initializers).then(() => {
+    isAppConfigReady().then(() => {
       if (gleisPlanSavedActive === undefined) {
         console.info('Created default plan');
         fetch(`/${base}/plans/${GLEISPLAN_NAME_DEFAULT}`)

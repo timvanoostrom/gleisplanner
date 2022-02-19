@@ -56,23 +56,19 @@ export function setPaired(paired: boolean) {
 //   }
 // } else {
 
-function createTcpServer() {
-  return new Promise<{ server: net.Server; socket: net.Socket }>(
-    (resolve, reject) => {
-      const server = net.createServer((socket) => {
-        console.log('server!');
-        if (socket) {
-          resolve({ server, socket });
-        } else {
-          reject('some-error??');
-        }
-      });
-      server.listen(NETBIDIB_PORT, NETBIDIB_ADDRESS);
-      server.once('listening', () => {
-        console.log('listttttt');
-      });
-    }
-  );
+export function startTcpServer(
+  connectionListener: (socket: net.Socket) => void
+) {
+  const server = net.createServer((socket) => {
+    setSocket(socket);
+    connectionListener(socket);
+  });
+  server.listen(NETBIDIB_PORT, NETBIDIB_ADDRESS);
+  server.once('listening', () => {
+    console.log(
+      `Listening on port ${NETBIDIB_PORT} address ${NETBIDIB_ADDRESS}`
+    );
+  });
 }
 
 // type NetMessageSend = (messageType: number) => void;
@@ -96,36 +92,11 @@ export function createNetMessageHandler(
     for (const message of messages) {
       const messageDetails = getBidibMessageDetails(message);
       const { payload, type: messageType } = messageDetails;
-
-      console.log('\n');
-      console.log(
-        '<< [NET]',
-        printMessageToHex(payload),
-        'msgType ' + hexStr(messageType),
-        UDs_BidibLocal[messageType] || getBidibMessageType(messageType)
-      );
-
       const handler = handlersByMessageType.get(messageType) || defaultHandler;
-      console.log('[SYS] handler', handler);
       handler(messageDetails);
     }
   };
 }
-
-// if (serialPort !== null) {
-//   serialPortConnection = serialPort;
-//   serialPort.on('data', (message) => {
-//     console.log('Relaying to HOST');
-//     bidibLogReceivedMessage(Array.from(message));
-//     socketConnection!.write(message, (err) => {
-//       if (err) {
-//         console.error('Sending message from serial failed', err);
-//       }
-//     });
-//   });
-// } else {
-//   console.error('Could not connect');
-// }
 
 export function netSend(message: BidibMessage | BidibMessage[]) {
   const messages = (
@@ -133,9 +104,6 @@ export function netSend(message: BidibMessage | BidibMessage[]) {
   ) as BidibMessage[];
 
   for (const message of messages) {
-    const msgType = bidibExtractMsgType(message);
-    console.log('>>', UDs_BidibLocal[msgType] || getBidibMessageType(msgType));
-
     if (netSocket !== null) {
       netSocket.write(Buffer.from(message));
     } else {
@@ -144,11 +112,6 @@ export function netSend(message: BidibMessage | BidibMessage[]) {
   }
 }
 
-export async function startNetBidibServer() {
-  return createTcpServer().then(({ server, socket }) => {
-    netServer = server;
-    netSocket = socket;
-
-    return { server, socket };
-  });
+export function setSocket(socket: net.Socket) {
+  netSocket = socket;
 }

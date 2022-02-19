@@ -1,8 +1,16 @@
 <script lang="ts">
-  import { afterUpdate, onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import svgPanZoom from 'svg-pan-zoom';
+  import { isAppConfigReady } from './store/appConfig';
   import { baseGroup, planeSvg } from './store/plane';
-  import { svgCoords, toggleTool, tools } from './store/workspace';
+  import {
+    currentZoom,
+    setCurrentZoom,
+    svgCoords,
+    toggleTool,
+    tools,
+    zoomzer,
+  } from './store/workspace';
 
   export let width: number = 0;
   export let height: number = 0;
@@ -21,28 +29,61 @@
   $: square = { ...DEFAULT_SQUARE };
 
   let anchorPoint = null;
-  let svgPanZoomzer;
+
+  function createZoomPoint(square) {
+    let point = $planeSvg.createSVGPoint();
+    point.x = square.mouseX + square.width / 2;
+    point.y = square.mouseY + square.height / 2;
+
+    const zoomPoint = point.matrixTransform($planeSvg.getScreenCTM().inverse());
+
+    return zoomPoint;
+  }
 
   onMount(() => {
-    console.log('mounting!');
-    svgPanZoomzer = svgPanZoom($planeSvg, {
+    const svgPanZoomzer = svgPanZoom($planeSvg, {
       minZoom: 0.1,
       maxZoom: 10,
       mouseWheelZoomEnabled: false,
       dblClickZoomEnabled: false,
-      panEnabled: false,
-      // onZoom: (event) => {
-      //   console.log('event', event);
-      // },
+      panEnabled: true,
+      // fit: false,
+      // contain: true,
+      // center: false,
+      onPan(newPan) {
+        console.log('newPan', newPan);
+        setCurrentZoom((current) => {
+          return {
+            ...current,
+            pan: newPan,
+          };
+        });
+      },
+      onZoom(zoom) {
+        setCurrentZoom((current) => {
+          return {
+            ...current,
+            zoom,
+          };
+        });
+      },
+    });
+
+    isAppConfigReady().then(() => {
+      zoomzer.set(svgPanZoomzer);
+      svgPanZoomzer.zoom($currentZoom.zoom || 1);
+      svgPanZoomzer.pan($currentZoom.pan || { x: 0, y: 0 });
     });
   });
 
-  onDestroy(() => {
-    // console.log('destroyyyyyy!');
-    // setTimeout(() => {
-    //   svgPanZoomzer.destroy();
-    //   svgPanZoomzer = null;
-    // }, 100);
+  tools.subscribe(({ zoom }) => {
+    if ($zoomzer) {
+      if (zoom) {
+        $zoomzer.disablePan();
+      } else {
+        $zoomzer.enablePan();
+      }
+    }
   });
 
   function startDrag(event) {
@@ -78,34 +119,20 @@
     }
   }
 
-  $: zoomX = 0;
-  $: zoomY = 0;
-
   function endDrag(event) {
     if ($tools.zoom) {
-      const centerX = square.x + square.width / 2;
-      const centerY = square.y + square.height / 2;
+      let currentZoom = $zoomzer.getZoom();
 
-      zoomX = centerX;
-      zoomY = centerY;
-
-      let point = $planeSvg.createSVGPoint();
-      console.log('sq', square);
-      point.x = square.mouseX + square.width / 2;
-      point.y = square.mouseY + square.height / 2;
-
-      const zoomPoint = point.matrixTransform(
-        $planeSvg.getScreenCTM().inverse()
-      );
-
-      let currentZoom = svgPanZoomzer.getZoom();
+      const zoomPoint = createZoomPoint(square);
       const zoomDelta = Math.max(Math.round(square.width / 10), 1) * 0.1;
       const newZoom = currentZoom + (shiftPressed ? -zoomDelta : zoomDelta);
 
-      console.log('t', newZoom);
+      $zoomzer.zoomAtPoint(newZoom, zoomPoint);
 
-      svgPanZoomzer.zoomAtPoint(newZoom, zoomPoint);
-      // this.zoomAtPoint(zoomFactor, point);
+      setCurrentZoom({
+        zoom: newZoom,
+        pan: $zoomzer.getPan(),
+      });
 
       anchorPoint = null;
       square = { ...DEFAULT_SQUARE };
@@ -119,9 +146,11 @@
   function onKeyRouter(event) {
     shiftPressed = event.shiftKey;
   }
+
   function onKeyDownRouter(event) {
     onKeyRouter(event);
   }
+
   function onKeyUpRouter(event) {
     if (event.key === 'z') {
       toggleTool('zoom');

@@ -20,6 +20,10 @@ import {
   layerControl,
   layersById,
 } from './layerControl';
+import svgPanZoom from 'svg-pan-zoom';
+
+const svgPanZoomInstance = svgPanZoom;
+type SvgPanZoomInstance = typeof svgPanZoomInstance;
 
 export const [dimensions, setDimensions] =
   appConfigValue<Dimensions>('dimensions');
@@ -46,9 +50,6 @@ export const viewBoxTranslation = derived(
     return translation;
   }
 );
-
-export const [selectionToolsEnabled, setSelectionToolsEnabled] =
-  appConfigValue<boolean>('selectionToolsEnabled');
 
 export function loadGleisPlanSaved(id: string) {
   const saved = get(gleisPlanSaved)[id];
@@ -204,12 +205,18 @@ export const slopes = db<Slopes>('slopes', {});
 export const guidesToolShapeType = writable('line');
 export const fillDialogActive = writable(false);
 
-type ZoomToolName = 'measure' | 'guides' | 'zoom';
+type ZoomToolName = 'measure' | 'guides' | 'zoom' | 'routeSimulation';
+export type ZoomState = { zoom: number; pan: Point };
+
+export const zoomzer = writable<SvgPanZoomInstance>();
+export const [currentZoom, setCurrentZoom] =
+  appConfigValue<ZoomState>('currentZoom');
 
 export const tools = writable<Record<ZoomToolName, boolean>>({
   measure: false,
   guides: false,
   zoom: false,
+  routeSimulation: false,
 });
 
 export function disableAllButTools(toolName: ZoomToolName) {

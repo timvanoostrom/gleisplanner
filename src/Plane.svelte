@@ -57,10 +57,10 @@
   const doDragTranslate = (event: MouseEvent) => {
     if (isDragActive) {
       const targetPoint = svgCoords(event, $planeSvg);
-      shiftViewBox(
-        anchorPoint.x - targetPoint.x,
-        anchorPoint.y - targetPoint.y
-      );
+      // shiftViewBox(
+      //   anchorPoint.x - targetPoint.x,
+      //   anchorPoint.y - targetPoint.y
+      // );
     }
   };
 
@@ -93,9 +93,7 @@
   <svg
     bind:this={$planeSvg}
     id="gleis-svg"
-    viewBox={`${$viewBoxTranslation.x} ${$viewBoxTranslation.y} ${
-      $dimensions.width / 2
-    } ${$dimensions.height / 2}`}
+    viewBox={`${0} ${0} ${$dimensions.width / 2} ${$dimensions.height / 2}`}
     on:pointerdown={startDrag}
     on:pointermove={doDrag}
     on:pointerup={endDrag}

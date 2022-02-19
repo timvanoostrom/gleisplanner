@@ -38,7 +38,9 @@
   let addToLayerValueSelected = 'new-layer';
   let addToNewLayerName = `Layer ${$layerControl.layers.length + 1}`;
 
+  $: list = $layerControl.layers;
   $: currentLayerCount = $layerControl.layers.length;
+  $: editableItem = list.find((layer) => layer.id === editDialogLayerId);
 
   interface AddLayerProps {
     gleisIds?: Array<GleisPropsPlanned['id']>;
@@ -170,8 +172,6 @@
     }
   }
 
-  $: list = $layerControl.layers;
-
   function sortList(event) {
     layerControl.update((layerControl) => {
       return {
@@ -244,19 +244,6 @@
           toggleLayerVisibility(item);
         }}
       />
-      <Button
-        variant="plain"
-        on:click={(event) => {
-          if (item.locked) {
-            return;
-          }
-          event.stopPropagation();
-          colorPickerDialogId = item.id;
-          // selectLayer(event, item);
-        }}
-      >
-        <span class="LayerColor" style={`background-color: ${item.color}`} />
-      </Button>
       <span
         role="button"
         class="LayerName"
@@ -375,6 +362,19 @@
     >
       <div class="DialogContent">
         <input bind:value={newLayerName} />
+        <Button
+          variant="plain"
+          on:click={(event) => {
+            event.stopPropagation();
+            colorPickerDialogId = editDialogLayerId;
+            // selectLayer(event, item);
+          }}
+        >
+          <span
+            class="LayerColor"
+            style={`background-color: ${editableItem?.color || 'transparent'}`}
+          />
+        </Button>
         <footer class="DialogFooter">
           <Button
             on:click={() => {

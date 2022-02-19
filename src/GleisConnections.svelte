@@ -6,14 +6,11 @@
   import {
     connectGleis,
     getCoordString,
-    gleisBezetz,
     gleisIdsActive,
     gleisPlanned as gleisPlannedBbyId,
-    gleisPlannedUnselectedByLayerId,
     pointConnections,
     protoGleisActive,
   } from './store/gleis';
-  import { layerControl } from './store/layerControl';
 
   import type { GleisPropsPlanned, Point, ProtoSegmentFlex } from './types';
 

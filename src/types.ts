@@ -1,10 +1,11 @@
 import type { Path as d3Path } from 'd3-path';
+import type { ZoomState } from './store/workspace';
 
 export interface AppConfig {
   dimensions: Dimensions;
   gridSize: Dimensions;
   gridVisible: boolean;
-  scale: number;
+  currentZoom: ZoomState;
   protoGleisIdActive: string;
   gleisPlanSaveIdSelected?: string;
   viewBoxTranslation: Point | null;
@@ -12,9 +13,6 @@ export interface AppConfig {
   trackLibQuickSelect: Record<string, string>;
   sidebarState: SidebarState;
   activeTrackLibId: string;
-  selectionToolsEnabled: boolean;
-  measureToolEnabled: boolean;
-  guidesToolEnabled: boolean;
 }
 
 export type GleisType =
@@ -171,6 +169,8 @@ export type AnglePreset = Array<number | ((c: Point) => Point) | undefined>;
 export interface PathSegmentProps {
   d: d3Path | string;
   type: 'main' | 'outer' | 'p1' | 'p2' | 'add' | 'splits';
+  gleisType?: GleisType | 'Curve2' | 'Straight2' | 'Branch1' | 'Branch2';
+  points?: string[];
 }
 
 export type GleisPlanned = Record<GleisPropsPlanned['id'], GleisPropsPlanned>;

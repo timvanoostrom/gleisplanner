@@ -62,7 +62,7 @@ export function sendMessage(message: BidibMessage | BidibMessageType) {
   if (message.length >= 4) {
     bidibLogSentMessage(message);
   } else {
-    console.log('>>', printMessageToHex(message));
+    // console.log('>>', printMessageToHex(message));
   }
 
   port.write(Buffer.from(message));
@@ -122,7 +122,6 @@ export function sendMessagesWithoutData(
   messageCodes: BidibMessageType[]
 ) {
   for (const messageType of messageCodes) {
-    console.log('\n');
     switch (messageType) {
       default:
         {
@@ -185,7 +184,6 @@ export function sendMessagesWithData(
   messageTypes: BidibMessage[]
 ) {
   for (const [messageType, ...messageData] of messageTypes) {
-    console.log('\n');
     switch (messageType) {
       default:
         {

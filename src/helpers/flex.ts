@@ -4,7 +4,7 @@ import { get, writable } from 'svelte/store';
 import { svgPathProperties } from 'svg-path-properties';
 import { A180, A90, GLEIS_WIDTH, GLEIS_WIDTH_WB } from '../config/constants';
 import { cAngle, normalizeAngle, toDeg, toRad } from '../helpers/geometry';
-import { connectGleis } from '../store/gleis';
+import { connectGleis, getCoordString } from '../store/gleis';
 import type {
   FlexPoints,
   PathSegmentProps,
@@ -253,7 +253,6 @@ export function generateFlexPaths(
   });
 
   let outerPath = d3.path();
-  let curves;
 
   try {
     previewBezier.outline(spreadB).curves.forEach((c, i) => {
@@ -319,6 +318,8 @@ export function generateFlexPaths(
     {
       d: mainPath,
       type: 'main',
+      gleisType: 'Flex',
+      points: points.slice(0, 4).map((p) => getCoordString(p)),
     },
     {
       d: splitsPath,

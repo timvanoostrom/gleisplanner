@@ -1,16 +1,17 @@
-import * as d3 from "d3-path";
-import { svgPathProperties } from "svg-path-properties";
+import * as d3 from 'd3-path';
+import { svgPathProperties } from 'svg-path-properties';
 import {
   A180,
   A360,
   GLEIS_WIDTH,
   GLEIS_WIDTH_WB,
   A90,
-} from "../config/constants";
-import type { PathSegmentProps, Point, ProtoSegmentCurve } from "../types";
-import { Direction } from "../types";
-import { normalizeAngle, toDeg, toRad } from "./geometry";
-import { getPathMidPoint } from "./svg";
+} from '../config/constants';
+import type { PathSegmentProps, Point, ProtoSegmentCurve } from '../types';
+import { Direction } from '../types';
+import { normalizeAngle, toRad } from './geometry';
+import { getPathMidPoint } from './svg';
+import { getCoordString } from '../store/gleis';
 
 interface curveCenterProps {
   x: number;
@@ -114,7 +115,7 @@ export function calculateCurvePoints({
   const point1: Point = {
     x: pointOrigin.x,
     y: pointOrigin.y,
-    type: "c1",
+    type: 'c1',
     direction: curveDirection,
     connectAngle: startAngle,
   };
@@ -122,14 +123,14 @@ export function calculateCurvePoints({
   const point2: Point = {
     x: endX,
     y: endY,
-    type: "c2",
+    type: 'c2',
     direction: direction,
     connectAngle: endAngle,
   };
 
-  if (connectingPointOrigin?.type === "c1") {
-    point1.type = "c2";
-    point2.type = "c1";
+  if (connectingPointOrigin?.type === 'c1') {
+    point1.type = 'c2';
+    point2.type = 'c1';
   }
 
   if (isRoot) {
@@ -142,13 +143,13 @@ export function calculateCurvePoints({
     {
       x: curveCenterX,
       y: curveCenterY,
-      type: "cc",
+      type: 'cc',
     },
     {
       x: arcCenter.x,
       y: arcCenter.y,
       connectAngle: connectAngle,
-      type: "lbl",
+      type: 'lbl',
     },
   ];
 
@@ -201,32 +202,34 @@ export function generateCurvePaths(
   const p2 = d3.path();
   p2.arc(cx, cy, proto.radius + spread, startAngle, endAngle, counterClockWise);
 
-  const path1: PathSegmentProps = { d: p1, type: "p1" };
+  const path1: PathSegmentProps = { d: p1, type: 'p1' };
   const path2: PathSegmentProps = {
     d: p2,
-    type: "p2",
+    type: 'p2',
   };
 
   if (
     (direction2 === direction &&
-      ((direction === Direction.R && t1 === "c2") ||
-        (direction === Direction.L && t1 === "c1"))) ||
+      ((direction === Direction.R && t1 === 'c2') ||
+        (direction === Direction.L && t1 === 'c1'))) ||
     (direction2 !== direction &&
-      ((direction === Direction.R && t1 === "c1") ||
-        (direction === Direction.L && t1 === "c2")))
+      ((direction === Direction.R && t1 === 'c1') ||
+        (direction === Direction.L && t1 === 'c2')))
   ) {
-    path1.type = "p2";
-    path2.type = "p1";
+    path1.type = 'p2';
+    path2.type = 'p1';
   }
 
   const paths: PathSegmentProps[] = [
     {
       d: outerPath,
-      type: "outer",
+      type: 'outer',
     },
     {
       d: mainPath,
-      type: "main",
+      type: 'main',
+      gleisType: 'Curve',
+      points: points.slice(0, 2).map((p) => getCoordString(p)),
     },
     path1,
     path2,

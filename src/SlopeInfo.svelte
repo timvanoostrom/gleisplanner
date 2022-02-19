@@ -134,11 +134,11 @@
 
         const segments = idChain.map((id, i) => {
           const segment = segmentSources[id];
-          const spath = new SVGPathCommander(segment.path);
+          const spath = new SVGPathCommander(segment.path, {});
 
           if (!isWithinRadius(prevEnd, segment.point1, 10)) {
             console.log('reverse connection', id);
-            spath.reverse();
+            spath.reverse(false);
             segment.path = spath.toString();
             prevEnd = segment.point1;
           } else {

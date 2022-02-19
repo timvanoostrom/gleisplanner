@@ -168,6 +168,13 @@ export function generateTurnoutCurvedPaths(
 
   const curvePaths = generateCurvePaths([cu1, cu2, cc1], protoSegmentCurve);
   const curvePaths2 = generateCurvePaths([cu1, cu3, cc2], protoSegmentCurve2);
+  // TODO: Add specific gleisType to the curve paths. E.g primary, secondary? Or straight, branched..
+  const curveSecondaryPath = curvePaths2.find((path) => path.type === 'main');
+
+  if (curveSecondaryPath) {
+    curveSecondaryPath.gleisType = 'Curve2';
+  }
+
   const straightPaths = generateStraightPaths(
     [
       cu1,

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { afterUpdate } from 'svelte';
+  import { onMount } from 'svelte';
+
   import Button from './Button.svelte';
   import { trackLibByArtNr } from './config/trackLib';
   import ConnectionPane from './ConnectionPane.svelte';
@@ -24,11 +25,8 @@
   import SideMenu from './SideMenu.svelte';
   import SlopeConfig from './SlopeConfig.svelte';
   import SlopeInfo from './SlopeInfo.svelte';
-  import { initializers } from './store/appConfig';
+  import { appConfig, isAppConfigReady } from './store/appConfig';
   import {
-    findConnection,
-    getCoordString,
-    gleisBezetz,
     gleisIdsActive,
     gleisPlannedSelected,
     gleisPlannedSelectedByLayerId,
@@ -36,7 +34,6 @@
     isCutPathActive,
     singleFlexActive,
   } from './store/gleis';
-  import { layerControl } from './store/layerControl';
   import {
     activeGuide,
     fillDialogActive,
@@ -45,65 +42,20 @@
     slopesByLayerId,
     toggleTool,
     tools,
+    zoomzer,
   } from './store/workspace';
   import TrackLibControl from './TrackLibControl.svelte';
 
-  let isLoading = true;
+  $: isLoading = true;
 
   const tracksByArtNr = $trackLibByArtNr;
 
-  Promise.all(initializers).then(() => (isLoading = false));
-
   $: isGleisModeActive = !isAnyToolEnabled();
-  $: gleisz = $gleisPlannedUnselectedByLayerId[
-    $layerControl.activeLayerId
-  ]?.reduce((acc, gleisProps) => {
-    return Object.assign(acc, { [gleisProps.id]: gleisProps });
-  }, {});
 
-  let bezetzInterval;
-  let activeBezetzId;
-  let ids;
-  let nextPoint;
-
-  function highlight() {
-    let i = 0;
-
-    bezetzInterval = setInterval(() => {
-      if (!gleisz) {
-        return;
-      }
-      const connectedGleis = findConnection(gleisz, nextPoint, activeBezetzId);
-      if (connectedGleis && connectedGleis.id !== activeBezetzId) {
-        const { points, id, type } = connectedGleis;
-        const coordStringNextPoint = getCoordString(nextPoint);
-        nextPoint = points.find((p) => {
-          const coordString = getCoordString(p);
-          return (
-            coordString !== coordStringNextPoint &&
-            ['c1', 'c2'].includes(p.type)
-          );
-        });
-        activeBezetzId = connectedGleis.id;
-        gleisBezetz.set([activeBezetzId]);
-      } else {
-        clearInterval(bezetzInterval);
-      }
-      i++;
-      if (i == ids.length - 1) {
-        clearInterval(bezetzInterval);
-      }
-    }, 400);
-  }
-
-  afterUpdate(() => {
-    if (gleisz && !bezetzInterval) {
-      ids = Object.keys(gleisz);
-      activeBezetzId = ids[0];
-      nextPoint = gleisz[activeBezetzId].points[1];
-      gleisBezetz.set([activeBezetzId]);
-      highlight();
-    }
+  onMount(() => {
+    isAppConfigReady().then(() => {
+      isLoading = false;
+    });
   });
 </script>
 
@@ -148,6 +100,15 @@
         {/if}
         <Button isActive={$tools.zoom} on:click={() => toggleTool('zoom')}>
           Zoom
+        </Button>
+        {#if $tools.zoom}
+          <Button on:click={() => $zoomzer.reset()}>Reset</Button>
+        {/if}
+        <Button
+          isActive={$tools.routeSimulation}
+          on:click={() => toggleTool('routeSimulation')}
+        >
+          Route simulation
         </Button>
       </ControlMenuPanel>
     </div>

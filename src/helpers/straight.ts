@@ -1,8 +1,9 @@
 import * as d3 from 'd3-path';
-import { A180, A90, GLEIS_WIDTH, GLEIS_WIDTH_WB } from '../config/constants';
+import { getCoordString } from '../store/gleis';
+import { A90, GLEIS_WIDTH, GLEIS_WIDTH_WB } from '../config/constants';
 import type { PathSegmentProps, Point, ProtoSegmentStraight } from '../types';
 import { Direction } from '../types';
-import { cAngle, rotate, toRad, getMidPoint, toDeg } from './geometry';
+import { cAngle, rotate, toRad, getMidPoint } from './geometry';
 
 export function calculateStraightPoints(
   pointOrigin: Point,
@@ -201,7 +202,12 @@ export function generateStraightPaths(
 
   const paths: PathSegmentProps[] = [
     { d: outerPath, type: 'outer' },
-    { d: mainPath, type: 'main' },
+    {
+      d: mainPath,
+      type: 'main',
+      gleisType: 'Straight',
+      points: points.slice(0, 2).map((p) => getCoordString(p)),
+    },
     path1,
     path2,
   ];

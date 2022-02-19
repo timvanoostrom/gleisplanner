@@ -96,7 +96,7 @@ function bidibLogMessage(
 export function bidibLogReceivedMessage(message: BidibMessage) {
   const messageDetails = getBidibMessageDetails(message);
   const { type: messageType } = messageDetails;
-  bidibLogMessage(messageDetails, 'in');
+  // bidibLogMessage(messageDetails, 'in');
 
   if (messageType === Us_BidibSystem.MSG_SYS_ERROR) {
     console.log(chalk.bgRed(chalk.white('ERROR: ', getErrorDetails(message))));
@@ -105,7 +105,7 @@ export function bidibLogReceivedMessage(message: BidibMessage) {
 
 export function bidibLogSentMessage(message: BidibMessage) {
   const messageDetails = getBidibMessageDetails(message);
-  bidibLogMessage(messageDetails, 'out');
+  // bidibLogMessage(messageDetails, 'out');
 }
 
 export function getErrorDetails(message: BidibMessage) {
@@ -196,7 +196,6 @@ export function getBidibMessageDetails(
   const data = payload.slice(firstDataByteIndex);
 
   if (popCRC) {
-    console.log('popCRC', data);
     data.pop();
   }
 
@@ -288,5 +287,7 @@ const stripBytesFromSerialMessage = [BidibSerialLink.BIDIB_PKT_MAGIC];
 export function prepareNetMessageFromSerial(message: BidibMessage) {
   // Remove the CRC value
   message.pop();
-  return unescapeMessageBytes(message);
+  const messageUnescaped = unescapeMessageBytes(message);
+
+  return messageUnescaped;
 }

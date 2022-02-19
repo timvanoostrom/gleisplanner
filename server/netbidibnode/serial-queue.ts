@@ -107,7 +107,6 @@ export function createSerialMessageHandler(
   defaultHandler: SerialMessageReceive = receiveUnexpected
 ) {
   return function onReply(message: Uint8Array) {
-    console.log('[SYS] message from Serial');
     const payload = Array.from(message);
     if (queue.length) {
       const uplinkMessageType = bidibExtractMsgType(payload);
@@ -127,12 +126,10 @@ export function createSerialMessageHandler(
         nextLineItem();
       } else {
         // Could make this a Promise<>
-        console.log('[SYS] (q:true) serial.handler', defaultHandler);
         defaultHandler(payload);
       }
     } else {
       // Could make this a Promise<>
-      console.log('[SYS] (q:false) serial.handler', defaultHandler);
       defaultHandler(payload);
     }
   };

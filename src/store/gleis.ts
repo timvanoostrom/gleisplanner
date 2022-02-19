@@ -70,23 +70,23 @@ export function unsetGleisIdActive(deselectIds: string[]) {
 
 export const gleisPlannedDB = db<GleisPlanned>('gleisPlanned', {});
 
-export const gleisPlannedWithPaths = derived(
-  [gleisPlannedDB, trackLibByArtNr],
-  ([gleisPlannedDB, trackLibByArtNr]) => {
-    const gleisPlannedEntries = Object.entries(gleisPlannedDB).map(
-      ([id, gleis]) => {
-        let g = gleis;
-        if (!g.pathSegments) {
-          g = Object.assign({}, gleis, {
-            pathSegments: generateSegments(gleis, trackLibByArtNr[gleis.artnr]),
-          });
-        }
-        return [id, g] as const;
-      }
-    );
-    return gleisPlannedEntries;
-  }
-);
+// export const gleisPlannedWithPaths = derived(
+//   [gleisPlannedDB, trackLibByArtNr],
+//   ([gleisPlannedDB, trackLibByArtNr]) => {
+//     const gleisPlannedEntries = Object.entries(gleisPlannedDB).map(
+//       ([id, gleis]) => {
+//         let g = gleis;
+//         if (!g.pathSegments) {
+//           g = Object.assign({}, gleis, {
+//             pathSegments: generateSegments(gleis, trackLibByArtNr[gleis.artnr]),
+//           });
+//         }
+//         return [id, g] as const;
+//       }
+//     );
+//     return gleisPlannedEntries;
+//   }
+// );
 
 export const gleisPlanned = derived(
   [gleisPlannedDB, layersById],
@@ -510,92 +510,12 @@ export function findConnectingPointOrigin(
   return [connectingPointOrigin, connectingGleis];
 }
 
-window.removeLastGleis = () => {
-  const entries: Array<[string, GleisPropsPlanned]> = Object.entries(
-    get(gleisPlanned)
-  );
-  entries.pop();
-  gleisPlannedDB.set(Object.fromEntries(entries));
-};
-
-window.updateGleisPlanned = () => {
-  const withPaths = get(gleisPlannedWithPaths);
-  updateGleisPlanned(() =>
-    Object.fromEntries(
-      withPaths.map(([id, gleis]) => {
-        // let points = gleis.points;
-        // if (gleis.type === 'Flex' && points[0].type === 'c2') {
-        //   const [c2, cp1, cp2, c1] = points;
-        //   points = [c1, cp1, cp2, c2];
-        // } else if (points[0].type === 'c2') {
-        //   const [c2, c1] = points;
-        //   points = [c1, c2];
-        // }
-        return [
-          id,
-          Object.assign(gleis, {
-            // points,
-            pathSegments: gleis.pathSegments.map((ps) => {
-              return {
-                ...ps,
-                d: ps.d.toString(),
-              };
-            }),
-          }),
-        ];
-      })
-    )
-  );
-};
-
-// window.updateIds = () => {
-//   const gleis = JSON.parse(JSON.stringify(get(gleisPlanned)));
-//   for (const [id, g] of Object.entries(gleis)) {
-//     const newID = generateID();
-//     gleis[newID] = {
-//       ...(g as any),
-//       id: newID,
-//     };
-//     delete gleis[id];
-//   }
-//   gleisPlannedDB.set(gleis);
-// };
-
-// window.cleanGleisPlanned = () => {
-//   const layers = get(layersById);
-//   gleisPlannedDB.update((gleisPlanned) => {
-//     const cleaned = {};
-//     for (const [id, gleis] of Object.entries(gleisPlanned)) {
-//       if (layers[gleis.layerId] && gleis.points.length) {
-//         cleaned[id] = gleis;
-//       }
-//     }
-//     return cleaned;
-//   });
-// };
-
 export function getCoordString({ x, y }: Point) {
   return round(x, 0) + ',' + round(y, 0);
 }
 
 export const isCutPathActive = writable(false);
 export const pointConnections = writable({});
-
-// export const activePointConnections = derived(
-//   [pointConnections, gleisPlanned, activeLayer],
-//   ([pointConnections, gleisPlanned, activeLayer]) => {
-//     const activePointConnections = new Map<string, string[]>();
-//     for (const [coordString, ids] of pointConnections.entries()) {
-//       const activeIds = ids.filter((id) => {
-//         return gleisPlanned[id].layerId === activeLayer.id;
-//       });
-//       if (activeIds.length) {
-//         activePointConnections.set(coordString, activeIds);
-//       }
-//     }
-//     return activePointConnections;
-//   }
-// );
 
 // TODO: Implement incremental updates of the Map
 function addToPointConnections(gleis: GleisPropsPlanned) {
@@ -701,25 +621,73 @@ export function shortCircuitConnections() {
   );
 }
 
-export const slopesSelected = derived(
-  [gleisPlannedSelected],
-  ([gleisPlanned]) => {
-    return gleisPlanned
-      .filter((gleis) => !!gleis.slope)
-      .map((gleis) => {
-        const slope = gleis.slope;
-        return {
-          id: `slope-${gleis.id}`,
-          ...slope,
-          direction: slope.percentage < 0 ? 'down' : 'up',
-          elevation: slope.startElevation + (slope.percentage / 100) * length,
-          points: [
-            gleis.points[slope.pointsStartIndex],
-            gleis.points[slope.pointsEndIndex],
-          ],
-        };
-      });
-  }
-);
+export const gleisBezetz = writable<
+  Record<
+    GleisPropsPlanned['id'],
+    [Point | null, Point | null, PathSegmentProps['gleisType'] | '']
+  >
+>({});
 
-export const gleisBezetz = writable<string[]>([]);
+// window.removeLastGleis = () => {
+//   const entries: Array<[string, GleisPropsPlanned]> = Object.entries(
+//     get(gleisPlanned)
+//   );
+//   entries.pop();
+//   gleisPlannedDB.set(Object.fromEntries(entries));
+// };
+
+// window.updateGleisPlanned = () => {
+//   const withPaths = get(gleisPlannedWithPaths);
+//   updateGleisPlanned(() =>
+//     Object.fromEntries(
+//       withPaths.map(([id, gleis]) => {
+//         // let points = gleis.points;
+//         // if (gleis.type === 'Flex' && points[0].type === 'c2') {
+//         //   const [c2, cp1, cp2, c1] = points;
+//         //   points = [c1, cp1, cp2, c2];
+//         // } else if (points[0].type === 'c2') {
+//         //   const [c2, c1] = points;
+//         //   points = [c1, c2];
+//         // }
+//         return [
+//           id,
+//           Object.assign(gleis, {
+//             // points,
+//             pathSegments: gleis.pathSegments.map((ps) => {
+//               return {
+//                 ...ps,
+//                 d: ps.d.toString(),
+//               };
+//             }),
+//           }),
+//         ];
+//       })
+//     )
+//   );
+// };
+
+// window.updateIds = () => {
+//   const gleis = JSON.parse(JSON.stringify(get(gleisPlanned)));
+//   for (const [id, g] of Object.entries(gleis)) {
+//     const newID = generateID();
+//     gleis[newID] = {
+//       ...(g as any),
+//       id: newID,
+//     };
+//     delete gleis[id];
+//   }
+//   gleisPlannedDB.set(gleis);
+// };
+
+// window.cleanGleisPlanned = () => {
+//   const layers = get(layersById);
+//   gleisPlannedDB.update((gleisPlanned) => {
+//     const cleaned = {};
+//     for (const [id, gleis] of Object.entries(gleisPlanned)) {
+//       if (layers[gleis.layerId] && gleis.points.length) {
+//         cleaned[id] = gleis;
+//       }
+//     }
+//     return cleaned;
+//   });
+// };
