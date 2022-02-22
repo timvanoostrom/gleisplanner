@@ -621,12 +621,9 @@ export function shortCircuitConnections() {
   );
 }
 
-export const gleisBezetz = writable<
-  Record<
-    GleisPropsPlanned['id'],
-    [Point | null, Point | null, PathSegmentProps['gleisType'] | '']
-  >
->({});
+export type Combo = [string, GleisPropsPlanned, string];
+
+export const gleisBezetz = writable<Record<GleisPropsPlanned['id'], Combo>>({});
 
 // window.removeLastGleis = () => {
 //   const entries: Array<[string, GleisPropsPlanned]> = Object.entries(
@@ -635,6 +632,85 @@ export const gleisBezetz = writable<
 //   entries.pop();
 //   gleisPlannedDB.set(Object.fromEntries(entries));
 // };
+
+window.assignPathPoints = function assignPathPoints() {
+  updateGleisPlanned((gleisPlanned) => {
+    Object.entries(gleisPlanned).forEach(([id, gleis]) => {
+      let prevSegment;
+      gleis.pathSegments = gleis.pathSegments.map((path, index) => {
+        if (path.type !== 'main') {
+          return path;
+        }
+
+        switch (gleis.type) {
+          case 'Crossing':
+          case 'Engels':
+            {
+              const points = [];
+              let skip = 0;
+              for (const p of gleis.points) {
+                if (p.type === 'c1' || p.type === 'c2') {
+                  if (prevSegment && skip >= 2) {
+                    points.push(getCoordString(p));
+                  } else if (!prevSegment && skip < 2) {
+                    points.push(getCoordString(p));
+                  }
+                  skip += 1;
+                }
+              }
+              path.gleisType = !!prevSegment ? 'Straight2' : 'Straight';
+              path.points = points;
+            }
+            break;
+          case 'Flex':
+          case 'Straight':
+          case 'Curve':
+            path.points = gleis.points
+              .filter((p) => p.type === 'c1' || p.type === 'c2')
+              .map((p) => getCoordString(p));
+            path.gleisType = gleis.type;
+            break;
+          case 'Turnout':
+          case 'TurnoutCurved':
+            {
+              const points = [];
+              let skip = 0;
+              for (const p of gleis.points) {
+                if (p.type === 'c1' || p.type === 'c2') {
+                  if (prevSegment && skip >= 2) {
+                    points.push(getCoordString(p));
+                    if (skip === 2) {
+                      points.push(prevSegment.points[0]);
+                    }
+                  } else if (!prevSegment && skip < 2) {
+                    points.push(getCoordString(p));
+                  }
+                  skip += 1;
+                }
+              }
+              if (gleis.type === 'TurnoutCurved') {
+                path.gleisType = !!prevSegment ? 'Curve2' : 'Curve';
+              } else {
+                path.gleisType = !!prevSegment ? 'Curve' : 'Straight';
+              }
+
+              path.points = points;
+            }
+            break;
+
+          case 'ThreeWay':
+            // TODO: Implement!!!
+            break;
+        }
+        prevSegment = path;
+        return path;
+      });
+
+      return [id, gleis];
+    });
+    return gleisPlanned;
+  });
+};
 
 // window.updateGleisPlanned = () => {
 //   const withPaths = get(gleisPlannedWithPaths);

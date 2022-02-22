@@ -2,7 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import type { Readable } from 'svelte/store';
   import { isCutPathActive } from './store/gleis';
-  import { svgCoords } from './store/workspace';
+  import { svgCoords, zoomzer } from './store/workspace';
   import type { GleisPropsPlanned } from './types';
 
   export let selectionArea: Partial<DOMRect>;
@@ -29,6 +29,7 @@
 
   function startDragTranslate(event) {
     if (!isDragActive) {
+      $zoomzer.disablePan();
       event.stopImmediatePropagation();
       anchorPoint = svgCoords(event, transformHost);
       isDragActive = true;
@@ -74,6 +75,7 @@
       });
       isDragActive = false;
       prevTranslate = 0;
+      $zoomzer.enablePan();
     }
   }
 

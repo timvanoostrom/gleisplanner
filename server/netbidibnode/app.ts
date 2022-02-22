@@ -52,7 +52,7 @@ import {
       console.log('Error: ', err.message);
     });
 
-    function pass2Net(message: BidibMessage) {
+    function relay2Net(message: BidibMessage) {
       const details = getBidibMessageDetails(message);
       console.log(
         logColor('S-2-N', 'blueBright'),
@@ -69,20 +69,14 @@ import {
       }
     }
 
-    const onData = createSerialMessageHandler(pass2Net);
+    const onData = createSerialMessageHandler(relay2Net);
 
     serialParser.on('data', onData);
 
     sendBidibControlStationStartup(CS_NODE_ADDRESS);
-
-    // await wait(500);
-    // sendBidibNodeTabGetAll(CS_NODE_ADDRESS);
-    // await wait(500);
-    // sendBidibNodeTabGetNext(CS_NODE_ADDRESS, 2);
-    // sendCsState(CS_NODE_ADDRESS, BidibCsState.BIDIB_CS_STATE_OFF);
   }
 
-  function pass2Serial(messageDetails: BidibMessageDetails) {
+  function relay2Serial(messageDetails: BidibMessageDetails) {
     if (isPaired) {
       console.log(
         logColor('N-2-S', 'yellowBright'),
@@ -90,8 +84,8 @@ import {
         printMessageToHex(messageDetails.payload)
         // details
       );
+      // TODO: Determine if this message has Data or not
       sendMessagesWithoutData(messageDetails.address, [messageDetails.type]);
-      // serialport.write(Buffer.from(messageDetails.payload));
     } else {
       console.log('not paired!?');
     }
@@ -105,7 +99,7 @@ import {
       localLogonRejectedHandler,
     ];
 
-    const onData = createNetMessageHandler(pass2Serial, ...handlers);
+    const onData = createNetMessageHandler(relay2Serial, ...handlers);
     socket.on('data', onData);
   });
 })();

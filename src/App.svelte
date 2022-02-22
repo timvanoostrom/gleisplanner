@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-
+  import BezetzController from './BezetzController.svelte';
+  import BezetzGleis from './BezetzGleis.svelte';
   import Button from './Button.svelte';
   import { trackLibByArtNr } from './config/trackLib';
   import ConnectionPane from './ConnectionPane.svelte';
@@ -25,7 +26,7 @@
   import SideMenu from './SideMenu.svelte';
   import SlopeConfig from './SlopeConfig.svelte';
   import SlopeInfo from './SlopeInfo.svelte';
-  import { appConfig, isAppConfigReady } from './store/appConfig';
+  import { isAppConfigReady } from './store/appConfig';
   import {
     gleisIdsActive,
     gleisPlannedSelected,
@@ -110,6 +111,9 @@
         >
           Route simulation
         </Button>
+        {#if $tools.routeSimulation}
+          <BezetzController />
+        {/if}
       </ControlMenuPanel>
     </div>
   </header>
@@ -146,6 +150,9 @@
           gleisPlanned={$gleisPlannedSelected}
           selectionMode={isGleisModeActive}
         />
+      {/if}
+      {#if $tools.routeSimulation}
+        <BezetzGleis />
       {/if}
 
       {#if $connectFlexPointStart}
