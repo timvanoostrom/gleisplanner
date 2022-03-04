@@ -11,7 +11,7 @@
   } from './store/gleis';
   import { layerControl, layersById } from './store/layerControl';
   import { availableSpaceElement, baseGroup, planeSvg } from './store/plane';
-  import { svgCoords } from './store/workspace';
+  import { svgCoords, tools } from './store/workspace';
   import type { Point, PointDimensions } from './types';
 
   let dragAnchor = null;
@@ -140,7 +140,9 @@
 
   function onKeyDownRouter(event) {
     switch (true) {
-      case event.key === 'Backspace' && event.target.tagName !== 'INPUT':
+      case event.key === 'Backspace' &&
+        event.target.tagName !== 'INPUT' &&
+        !$tools.guides:
         event.preventDefault();
         deleteGleisActive();
         break;

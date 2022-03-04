@@ -1,55 +1,18 @@
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
-  import { derived, get } from 'svelte/store';
+  import { onDestroy } from 'svelte';
   import Button from './Button.svelte';
   import { isWithinRadius } from './helpers/geometry';
   import {
     Combo,
-    findConnection,
     getCoordString,
     gleisBezetz,
     gleisIdsActive,
     gleisPlanned,
-    gleisPlannedUnselectedByLayerId,
     pointConnections,
   } from './store/gleis';
-  import { layerControl } from './store/layerControl';
-  import { tools } from './store/workspace';
   import type { GleisPropsPlanned, Point } from './types';
 
-  // const activeLayerGleisById = derived(
-  //   [gleisPlannedUnselectedByLayerId, layerControl],
-  //   ([gleisPlannedUnselectedByLayerId, layerControl]) => {
-  //     const gleis = layerControl.layers
-  //       .filter((layer) => layer.isVisible)
-  //       .flatMap((layer) => {
-  //         return gleisPlannedUnselectedByLayerId[layer.id] || [];
-  //       });
-  //     return gleis.reduce((acc, gleisProps) => {
-  //       return Object.assign(acc, { [gleisProps.id]: gleisProps });
-  //     }, {});
-  //   }
-  // );
-
-  // export function findAllConnectingGleisAtPoints(
-  //   gleisz: Record<GleisPropsPlanned['id'], GleisPropsPlanned>,
-  //   points: Point[],
-  //   excludeId: GleisPropsPlanned['id']
-  // ): Array<[Point, GleisPropsPlanned]> {
-  //   return points
-  //     .filter((p) => ['c1', 'c2'].includes(p.type))
-  //     .map((point) => {
-  //       const connectingGleis = findConnection(gleisz, point, excludeId);
-  //       return [point, connectingGleis];
-  //     })
-  //     .filter(([id, gleis]) => {
-  //       return !!gleis;
-  //     }) as Array<[Point, GleisPropsPlanned]>;
-  // }
-
-  // Select connecting gleis not attached to the currentPoint.
-  // Will result in all (c1|c2) points of first gleis if there is no current point.
-  function findPointType(points: Point[], str: string) {
+  function findPointByCoordString(points: Point[], str: string) {
     return points.find((p) => getCoordString(p) === str);
   }
 
@@ -59,20 +22,21 @@
     currentGleis: GleisPropsPlanned,
     curPoint: string
   ): Combo[] {
-    const connectingPoints = currentGleis.pathSegments
-      .filter((segment) => segment.type === 'main')
-      .flatMap((segment) =>
-        segment.points
-          .filter((pointString) => {
-            return pointString !== curPoint;
-          })
-          .filter((pointString) =>
-            ['c1', 'c2'].includes(
-              findPointType(currentGleis.points, pointString)?.type
+    const connectingPoints =
+      currentGleis.pathSegments
+        ?.filter((segment) => segment.type === 'main')
+        .flatMap((segment) =>
+          segment.points
+            .filter((pointString) => {
+              return pointString !== curPoint;
+            })
+            .filter((pointString) =>
+              ['c1', 'c2'].includes(
+                findPointByCoordString(currentGleis.points, pointString)?.type
+              )
             )
-          )
-          .map((pointStr) => [pointStr, 'connectedAt.' + segment.gleisType])
-      );
+            .map((pointStr) => [pointStr, 'connectedAt.' + segment.gleisType])
+        ) || [];
 
     // All the connected gleis on the far-side points of the currentActivePoint. In the case of the first gleis, it will
     // be the gleis connected at all the points
@@ -105,6 +69,19 @@
         gleisProps.layerId === currentGleis.layerId
     );
 
+    const pointWendelConnect = currentGleis?.config?.['wendel-connect'];
+    if (pointWendelConnect) {
+      // Find connections at outgoing point.
+      // If the connection is in the same layer it must be a continuation of the wendel right?
+      // If the connection is in another layer, which layer should we take?
+      candidates = connectedGleis.filter(([pointStr, gleisProps]: Combo) => {
+        return (
+          pointStr === getCoordString(pointWendelConnect) &&
+          gleisProps.layerId !== currentGleis.layerId
+        );
+      });
+    }
+
     if (!candidates.length && connectedGleis.length) {
       console.log('Check possible candidates in another layer');
       // Which layer to take here?
@@ -126,6 +103,7 @@
   }
 
   function getNextGleisCombo(
+    curPoint: string,
     currentGleis: GleisPropsPlanned,
     candidates: Combo[]
   ): Combo {
@@ -144,8 +122,33 @@
       case 'Curve':
       case 'Flex':
       case 'Straight':
+        if (candidates.length > 1) {
+          const curPointType = findPointByCoordString(
+            currentGleis.points,
+            curPoint
+          )?.type;
+          console.log(
+            '....',
+            curPointType || 'Cannot determine current point type'
+          );
+          if (curPointType) {
+            combo = candidates.find(([coordString, { points }], index) => {
+              const candidatePoint = findPointByCoordString(
+                points,
+                coordString
+              );
+              console.log(
+                'candidate ' + index + ' point type',
+                candidatePoint?.type
+              );
+              return !!candidatePoint && curPointType === candidatePoint?.type;
+            });
+            console.log('combo!', combo);
+          }
+        }
         break;
       case 'Turnout':
+        [, combo] = candidates;
         break;
       case 'TurnoutCurved':
         break;
@@ -165,6 +168,27 @@
     return combo;
   }
 
+  function getComboAt(
+    gleisId: GleisPropsPlanned['id'],
+    curPoint: string,
+    gleisById: Record<GleisPropsPlanned['id'], GleisPropsPlanned>,
+    connectionsByCoordString: unknown
+  ) {
+    const currentGleis: GleisPropsPlanned = gleisById[gleisId];
+    const connectedGleis = getConnectedGleis(
+      gleisById,
+      connectionsByCoordString,
+      currentGleis,
+      curPoint
+    );
+    const candidates = getNextGleisCandidates(
+      curPoint,
+      currentGleis,
+      connectedGleis
+    );
+    return getNextGleisCombo(curPoint, currentGleis, candidates);
+  }
+
   function* runSimulation(
     gleisById: Record<GleisPropsPlanned['id'], GleisPropsPlanned>,
     connectionsByCoordString: unknown,
@@ -174,24 +198,27 @@
     let activeBezetzId: GleisPropsPlanned['id'] = startAtId;
 
     while (true) {
-      const currentGleis: GleisPropsPlanned = gleisById[activeBezetzId];
-      const connectedGleis = getConnectedGleis(
-        gleisById,
-        connectionsByCoordString,
-        currentGleis,
-        curPoint
-      );
-      const candidates = getNextGleisCandidates(
+      const activeCombo = getComboAt(
+        activeBezetzId,
         curPoint,
-        currentGleis,
-        connectedGleis
+        gleisById,
+        connectionsByCoordString
       );
-      const combo = getNextGleisCombo(currentGleis, candidates);
+      if (activeCombo) {
+        const [nextPoint, { id: nextBezetzId }] = activeCombo;
 
-      if (combo) {
-        [curPoint, { id: activeBezetzId }] = combo;
+        const nextCombo = getComboAt(
+          nextBezetzId,
+          nextPoint,
+          gleisById,
+          connectionsByCoordString
+        );
+
+        activeBezetzId = nextBezetzId;
+        curPoint = nextPoint;
+
         yield {
-          [activeBezetzId]: combo,
+          [activeBezetzId]: [...activeCombo, ...(nextCombo ?? [])],
         };
       } else {
         return;

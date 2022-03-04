@@ -51,7 +51,6 @@
       // contain: true,
       // center: false,
       onPan(newPan) {
-        console.log('newPan', newPan);
         setCurrentZoom((current) => {
           return {
             ...current,
@@ -148,10 +147,16 @@
   }
 
   function onKeyDownRouter(event) {
+    if (event.shiftKey || event.metaKey) {
+      $zoomzer.disablePan();
+    }
     onKeyRouter(event);
   }
 
   function onKeyUpRouter(event) {
+    if ((event.shiftKey || event.metaKey) && !$zoomzer.isPanEnabled()) {
+      $zoomzer.enablePan();
+    }
     if (event.key === 'z') {
       toggleTool('zoom');
     }
@@ -160,6 +165,7 @@
 </script>
 
 <svelte:window on:keydown={onKeyDownRouter} on:keyup={onKeyUpRouter} />
+
 {#if $tools.zoom}
   <rect
     class="ZoomSpace"

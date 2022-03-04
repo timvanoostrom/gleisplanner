@@ -175,6 +175,7 @@ export function generateStraightPaths(
   p2.lineTo(x6, y6);
 
   const outerPath = d3.path();
+
   addStraightPathTo({
     path: outerPath,
     x1,
@@ -188,11 +189,19 @@ export function generateStraightPaths(
   const path1: PathSegmentProps = {
     d: p1,
     type: 'p1',
+    points: [
+      getCoordString({ x: x4, y: y4 }),
+      getCoordString({ x: x5, y: y5 }),
+    ],
   };
 
   const path2: PathSegmentProps = {
     d: p2,
     type: 'p2',
+    points: [
+      getCoordString({ x: x7, y: y7 }),
+      getCoordString({ x: x6, y: y6 }),
+    ],
   };
 
   if (t1 === 'c2') {

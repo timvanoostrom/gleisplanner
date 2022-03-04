@@ -70,24 +70,6 @@ export function unsetGleisIdActive(deselectIds: string[]) {
 
 export const gleisPlannedDB = db<GleisPlanned>('gleisPlanned', {});
 
-// export const gleisPlannedWithPaths = derived(
-//   [gleisPlannedDB, trackLibByArtNr],
-//   ([gleisPlannedDB, trackLibByArtNr]) => {
-//     const gleisPlannedEntries = Object.entries(gleisPlannedDB).map(
-//       ([id, gleis]) => {
-//         let g = gleis;
-//         if (!g.pathSegments) {
-//           g = Object.assign({}, gleis, {
-//             pathSegments: generateSegments(gleis, trackLibByArtNr[gleis.artnr]),
-//           });
-//         }
-//         return [id, g] as const;
-//       }
-//     );
-//     return gleisPlannedEntries;
-//   }
-// );
-
 export const gleisPlanned = derived(
   [gleisPlannedDB, layersById],
   ([gleisPlannedDB, layersById]) => {
@@ -621,7 +603,17 @@ export function shortCircuitConnections() {
   );
 }
 
-export type Combo = [string, GleisPropsPlanned, string];
+type PointString = string;
+type GleisConnectionType = string;
+
+export type Combo = [
+  PointString,
+  GleisPropsPlanned,
+  GleisConnectionType,
+  PointString,
+  GleisPropsPlanned,
+  GleisConnectionType
+];
 
 export const gleisBezetz = writable<Record<GleisPropsPlanned['id'], Combo>>({});
 
@@ -712,35 +704,53 @@ window.assignPathPoints = function assignPathPoints() {
   });
 };
 
-// window.updateGleisPlanned = () => {
-//   const withPaths = get(gleisPlannedWithPaths);
-//   updateGleisPlanned(() =>
-//     Object.fromEntries(
-//       withPaths.map(([id, gleis]) => {
-//         // let points = gleis.points;
-//         // if (gleis.type === 'Flex' && points[0].type === 'c2') {
-//         //   const [c2, cp1, cp2, c1] = points;
-//         //   points = [c1, cp1, cp2, c2];
-//         // } else if (points[0].type === 'c2') {
-//         //   const [c2, c1] = points;
-//         //   points = [c1, c2];
-//         // }
-//         return [
-//           id,
-//           Object.assign(gleis, {
-//             // points,
-//             pathSegments: gleis.pathSegments.map((ps) => {
-//               return {
-//                 ...ps,
-//                 d: ps.d.toString(),
-//               };
-//             }),
-//           }),
-//         ];
-//       })
-//     )
-//   );
-// };
+export const gleisPlannedWithPaths = derived(
+  [gleisPlannedDB, trackLibByArtNr],
+  ([gleisPlannedDB, trackLibByArtNr]) => {
+    const gleisPlannedEntries = Object.entries(gleisPlannedDB).map(
+      ([id, gleis]) => {
+        let g = gleis;
+        if (!g.pathSegments) {
+          g = Object.assign({}, gleis, {
+            pathSegments: generateSegments(gleis, trackLibByArtNr[gleis.artnr]),
+          });
+        }
+        return [id, g] as const;
+      }
+    );
+    return gleisPlannedEntries;
+  }
+);
+
+window.updateGleisPlanned = () => {
+  const withPaths = get(gleisPlannedWithPaths);
+  updateGleisPlanned(() =>
+    Object.fromEntries(
+      withPaths.map(([id, gleis]) => {
+        // let points = gleis.points;
+        // if (gleis.type === 'Flex' && points[0].type === 'c2') {
+        //   const [c2, cp1, cp2, c1] = points;
+        //   points = [c1, cp1, cp2, c2];
+        // } else if (points[0].type === 'c2') {
+        //   const [c2, c1] = points;
+        //   points = [c1, c2];
+        // }
+        return [
+          id,
+          Object.assign(gleis, {
+            // points,
+            pathSegments: gleis.pathSegments.map((ps) => {
+              return {
+                ...ps,
+                d: ps.d.toString(),
+              };
+            }),
+          }),
+        ];
+      })
+    )
+  );
+};
 
 // window.updateIds = () => {
 //   const gleis = JSON.parse(JSON.stringify(get(gleisPlanned)));

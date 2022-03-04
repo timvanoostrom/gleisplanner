@@ -4,15 +4,47 @@
   import { gleisBezetz } from './store/gleis';
 
   $: bezetzCombos = Object.entries($gleisBezetz);
-  $: console.log('bezetzCombos:', bezetzCombos);
+
+  function getBezetzSegment(
+    id,
+    curPoint,
+    curGleis,
+    curConnectionType,
+    nextPoint,
+    nextGleis,
+    nextConnectionType
+  ) {
+    const segment =
+      curGleis.pathSegments
+        ?.filter(
+          (pathSegment) =>
+            (pathSegment.type === 'main' || pathSegment.type === 'branch') &&
+            !!pathSegment.points?.length
+        )
+        ?.find((pathSegment) => {
+          return (
+            (pathSegment.points.includes(curPoint) &&
+              pathSegment.points.includes(nextPoint)) ||
+            (!nextPoint && pathSegment.points.includes(curPoint))
+          );
+        })?.gleisType || '';
+
+    return segment;
+  }
 </script>
 
-{#each bezetzCombos as [id, combo]}
+{#each bezetzCombos as [id, [curPoint, curGleis, curConnectionType, nextPoint, nextGleis, nextConnectionType]]}
   <Gleis
-    gleisProps={combo[1]}
-    proto={$trackLibByArtNr[combo[1].artnr]}
-    bezetzSegment={combo[1].pathSegments.find(
-      (pathSegment) => pathSegment.type === 'main'
-    ).gleisType || ''}
+    gleisProps={curGleis}
+    proto={$trackLibByArtNr[curGleis.artnr]}
+    bezetzSegment={getBezetzSegment(
+      id,
+      curPoint,
+      curGleis,
+      curConnectionType,
+      nextPoint,
+      nextGleis,
+      nextConnectionType
+    )}
   />
 {/each}

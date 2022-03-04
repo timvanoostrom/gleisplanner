@@ -89,7 +89,7 @@
       height="24"
       class="PathLabelBg"
     />
-    <text x={label.x} y={label.y} r="10" class="PathLabel">
+    <text x={label.x} y={label.y} class="PathLabel">
       {label.label}
     </text>
   {/each}

@@ -105,8 +105,7 @@ export interface GleisConfig {
   tunnel?: 1;
   feedback?: 1;
   block?: 1;
-  isolation?: 1;
-  'dc-connect'?: 1;
+  'wendel-connect'?: Point;
 }
 
 export interface GleisPropsPlanned {
@@ -168,8 +167,8 @@ export type AnglePreset = Array<number | ((c: Point) => Point) | undefined>;
 
 export interface PathSegmentProps {
   d: d3Path | string;
-  type: 'main' | 'outer' | 'p1' | 'p2' | 'add' | 'splits';
-  gleisType?: GleisType | 'Curve2' | 'Straight2' | 'Branch1' | 'Branch2';
+  type: 'main' | 'outer' | 'p1' | 'p2' | 'add' | 'splits' | 'branch';
+  gleisType?: GleisType | 'Curve2' | 'Straight2';
   points?: string[];
 }
 

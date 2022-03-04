@@ -124,7 +124,6 @@
         {#each gleisPlanned as gleisProps (gleisProps.id)}
           <Gleis {gleisProps} proto={tracksByArtNr[gleisProps.artnr]} />
         {/each}
-
         <GleisConnections {gleisPlanned} />
       {/each}
       {#if $gleisPlannedSelected.length}
@@ -133,7 +132,7 @@
             {#if $singleFlexActive?.id !== gleisProps.id}
               <Gleis {gleisProps} proto={tracksByArtNr[gleisProps.artnr]} />
             {:else}
-              <FlexGleisModeller />
+              <FlexGleisModeller {gleisProps} />
             {/if}
           {/each}
         </SelectionTools>

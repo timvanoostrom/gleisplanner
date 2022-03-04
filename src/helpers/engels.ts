@@ -1,16 +1,11 @@
+import * as d3 from 'd3-path';
+import { getCoordString } from '../store/gleis';
+import { A90, GLEIS_WIDTH } from '../config/constants';
 import type { PathSegmentProps, Point, ProtoSegmentStraight } from '../types';
-import { calculateAngle, cAngle, getCentroid, toDeg, toRad } from './geometry';
+import { calculateCrossingPoints } from './crossing';
+import { cAngle, toRad } from './geometry';
 import { sortPaths } from './gleis';
 import { generateStraightPaths } from './straight';
-import * as d3 from 'd3-path';
-import {
-  A90,
-  GLEIS_WIDTH,
-  GLEIS_WIDTH_WB,
-  A180,
-  A360,
-} from '../config/constants';
-import { calculateCrossingPoints } from './crossing';
 
 export interface CalculateEngelsPointsProps {
   pointOrigin: Point;
@@ -88,15 +83,100 @@ export function generateEngelsPaths(
   const paths1 = generateStraightPaths([st1, st2], proto1);
   const paths2 = generateStraightPaths([st3, st4], proto2);
 
-  const curvePrimaryPath = paths1.find((path) => path.type === 'main');
-  if (curvePrimaryPath) {
-    curvePrimaryPath.gleisType = 'Branch1';
+  const engelsPrimaryPath = paths1.find((path) => path.type === 'main');
+  if (engelsPrimaryPath) {
+    engelsPrimaryPath.gleisType = 'Straight';
   }
 
-  const curveSecondaryPath = paths2.find((path) => path.type === 'main');
-  if (curveSecondaryPath) {
-    curveSecondaryPath.gleisType = 'Branch2';
+  const engelsSecondaryPath = paths2.find((path) => path.type === 'main');
+  if (engelsSecondaryPath) {
+    engelsSecondaryPath.gleisType = 'Straight2';
   }
 
-  return sortPaths(paths1, paths2);
+  const paths3: PathSegmentProps[] = [];
+  {
+    const mainPath = d3.path();
+
+    mainPath.moveTo(st1.x, st1.y);
+    const intersection = lineIntersection(
+      st1.x,
+      st1.y,
+      st2.x,
+      st2.y,
+      st3.x,
+      st3.y,
+      st4.x,
+      st4.y
+    );
+    if (intersection) {
+      mainPath.lineTo(intersection.x, intersection.y);
+    }
+    mainPath.lineTo(st4.x, st4.y);
+
+    paths3.push({
+      d: mainPath.toString(),
+      type: 'branch',
+      gleisType: 'Curve',
+      points: [getCoordString(st1), getCoordString(st4)],
+    });
+  }
+  {
+    const mainPath = d3.path();
+
+    mainPath.moveTo(st2.x, st2.y);
+    const intersection = lineIntersection(
+      st1.x,
+      st1.y,
+      st2.x,
+      st2.y,
+      st3.x,
+      st3.y,
+      st4.x,
+      st4.y
+    );
+    if (intersection) {
+      mainPath.lineTo(intersection.x, intersection.y);
+    }
+    mainPath.lineTo(st3.x, st3.y);
+
+    paths3.push({
+      d: mainPath.toString(),
+      type: 'branch',
+      gleisType: 'Curve2',
+      points: [getCoordString(st2), getCoordString(st3)],
+    });
+  }
+
+  return sortPaths(paths1, paths2, paths3);
+}
+
+// line intercept math by Paul Bourke http://paulbourke.net/geometry/pointlineplane/
+// Determine the intersection point of two line segments
+// Return FALSE if the lines don't intersect
+function lineIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
+  // Check if none of the lines are of length 0
+  if ((x1 === x2 && y1 === y2) || (x3 === x4 && y3 === y4)) {
+    return false;
+  }
+
+  let denominator = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+
+  // Lines are parallel
+  if (denominator === 0) {
+    return false;
+  }
+
+  let ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denominator;
+  let ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denominator;
+
+  // is the intersection along the segments
+  if (ua < 0 || ua > 1 || ub < 0 || ub > 1) {
+    return false;
+  }
+
+  // Return a object with the x and y coordinates of the intersection
+  let x = x1 + ua * (x2 - x1);
+  let y = y1 + ua * (y2 - y1);
+
+  return { x, y };
 }

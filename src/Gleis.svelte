@@ -1,10 +1,20 @@
 <script lang="ts">
+  import Button from './Button.svelte';
+
   import GleisBridge from './GleisBridge.svelte';
-  import { gleisBezetz, gleisIdsActive, setGleisIdActive } from './store/gleis';
+  import GleisWendelConnect from './GleisWendelConnect.svelte';
+  import {
+    getCoordString,
+    gleisBezetz,
+    gleisIdsActive,
+    setGleisIdActive,
+  } from './store/gleis';
+  import { setConfigItem } from './store/gleisConfig';
   import { layersById } from './store/layerControl';
   import type {
     GleisPropsPlanned,
     PathSegmentProps,
+    Point,
     ProtoGleis,
   } from './types';
 
@@ -13,6 +23,15 @@
   export let disabled: boolean = false;
   export let bezetzSegment: string = '';
 
+  let node: SVGGElement;
+
+  function isBezetz(pathSegment: PathSegmentProps): boolean {
+    return (
+      (pathSegment.type === 'main' || pathSegment.type === 'branch') &&
+      bezetzSegment === pathSegment.gleisType
+    );
+  }
+
   $: isActive = $gleisIdsActive.includes(gleisProps.id);
   $: gleisLayerPatternId = $layersById[gleisProps.layerId]?.patternId || '';
   $: gleisFillColor = $layersById[gleisProps.layerId]?.color || 'red';
@@ -20,6 +39,7 @@
 </script>
 
 <g
+  bind:this={node}
   id={gleisProps.id}
   class="Gleis"
   class:isActive
@@ -46,23 +66,16 @@
       <path
         d={pathSegment.d.toString()}
         class={`spath ${pathSegment.type}`}
-        class:bezetz={pathSegment.type === 'main' &&
-          bezetzSegment === pathSegment.gleisType}
+        class:bezetz={isBezetz(pathSegment)}
       />
     {/each}
   {/if}
-  {#if $gleisBezetz?.[gleisProps.id]?.length === 3 && $gleisBezetz[gleisProps.id][1] !== null}
-    <!-- <line
-      x1={$gleisBezetz[gleisProps.id][0].split(',')[0]}
-      y1={$gleisBezetz[gleisProps.id][0].split(',')[1]}
-      x2={$gleisBezetz[gleisProps.id][1].split(',')[0]}
-      y2={$gleisBezetz[gleisProps.id][1].split(',')[1]}
-      class="connect"
-    /> -->
-  {/if}
+
   {#each addPoints as addPoint}
     <circle r="5" cx={addPoint.x} cy={addPoint.y} class="AddPoint" />
   {/each}
+
+  <GleisWendelConnect {gleisProps} parentNode={node} />
 </g>
 
 <style>
@@ -73,7 +86,9 @@
   .main {
     stroke: black;
     stroke-opacity: 0;
-    stroke-dasharray: 4px 4px;
+  }
+  .branch {
+    stroke: black;
   }
   .splits {
     stroke: black;
@@ -110,7 +125,9 @@
   .hasTunnel .spath {
     opacity: 0.4;
   }
+  .branch.bezetz,
   .main.bezetz {
+    stroke-dasharray: 4px 4px;
     stroke-opacity: 1;
     stroke: purple;
     stroke-width: 10px;

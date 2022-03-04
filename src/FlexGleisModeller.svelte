@@ -3,6 +3,7 @@
   import debounce from 'lodash.debounce';
   import { beforeUpdate, onDestroy, onMount, tick } from 'svelte';
   import { A90 } from './config/constants';
+  import GleisWendelConnect from './GleisWendelConnect.svelte';
   import {
     calculateFlexPoints,
     connectFlexPointStart,
@@ -18,12 +19,15 @@
     updateGleis,
   } from './store/gleis';
   import { baseGroup, planeSvg } from './store/plane';
-  import type { Point, ProtoSegmentFlex } from './types';
+  import type { GleisPropsPlanned, Point, ProtoSegmentFlex } from './types';
+
+  export let gleisProps: GleisPropsPlanned = null;
 
   // drag handler
   let drag: boolean = false;
   let controlPointIndexes;
   let bezierInstance = null;
+  let node: SVGGElement;
 
   const protoSegment = $protoGleisActive.segments[0] as ProtoSegmentFlex;
 
@@ -286,11 +290,16 @@
   }}
 />
 
-{#if flexPaths?.length}
-  {#each flexPaths as pathSegment, index (pathSegment)}
-    <path d={pathSegment.d.toString()} class={`spath ${pathSegment.type}`} />
-  {/each}
-{/if}
+<g bind:this={node}>
+  {#if flexPaths?.length}
+    {#each flexPaths as pathSegment, index (pathSegment)}
+      <path d={pathSegment.d.toString()} class={`spath ${pathSegment.type}`} />
+    {/each}
+  {/if}
+  {#if gleisProps}
+    <GleisWendelConnect {gleisProps} parentNode={node} />
+  {/if}
+</g>
 
 {#if flexPoints?.length === 4}
   <!-- <Rotator center={p3} /> -->
