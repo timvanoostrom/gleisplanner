@@ -10,7 +10,6 @@ import { get } from 'svelte/store';
 export type Param = keyof GleisConfig;
 
 export const params: Param[] = [
-  'block',
   'feedback',
   'wendel-connect',
   'bridge',

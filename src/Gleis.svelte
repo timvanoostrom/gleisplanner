@@ -26,10 +26,7 @@
   let node: SVGGElement;
 
   function isBezetz(pathSegment: PathSegmentProps): boolean {
-    return (
-      (pathSegment.type === 'main' || pathSegment.type === 'branch') &&
-      bezetzSegment === pathSegment.gleisType
-    );
+    return bezetzSegment === pathSegment.d.toString();
   }
 
   $: isActive = $gleisIdsActive.includes(gleisProps.id);
@@ -138,5 +135,18 @@
   }
   .AddPoint {
     fill: red;
+  }
+  :global(.control-panel-view) .main {
+    stroke-opacity: 1;
+    /* stroke-width: 0.3em; */
+  }
+  :global(.control-panel-view) .splits,
+  :global(.control-panel-view) .p2,
+  :global(.control-panel-view) .p1 {
+    stroke-opacity: 0;
+  }
+  :global(.control-panel-view) .Gleis:hover .outer,
+  :global(.control-panel-view) .outer {
+    fill-opacity: 0;
   }
 </style>

@@ -21,7 +21,7 @@
   );
   $: boundsSelected = isActive && parentNode?.getBBox();
   $: wendelConnectPoint = gleisProps?.config?.['wendel-connect'];
-  $: console.log(boundsSelected, wendelConnectPoint);
+  // $: console.log(boundsSelected, wendelConnectPoint);
 </script>
 
 {#if !!wendelConnectPoint}

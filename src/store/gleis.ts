@@ -606,16 +606,23 @@ export function shortCircuitConnections() {
 type PointString = string;
 type GleisConnectionType = string;
 
-export type Combo = [
+export type GleisLink = [
+  /* FROM: */
   PointString,
-  GleisPropsPlanned,
-  GleisConnectionType,
+  GleisPropsPlanned | null,
+  /* TO: */
   PointString,
-  GleisPropsPlanned,
-  GleisConnectionType
+  GleisPropsPlanned
 ];
 
-export const gleisBezetz = writable<Record<GleisPropsPlanned['id'], Combo>>({});
+export type LinkedRoute = GleisLink[];
+
+interface Conn {
+  gleisType: string;
+  segmentType: string;
+}
+
+export const gleisBezetz = writable<LinkedRoute[]>([]);
 
 // window.removeLastGleis = () => {
 //   const entries: Array<[string, GleisPropsPlanned]> = Object.entries(

@@ -142,7 +142,7 @@
     switch (true) {
       case event.key === 'Backspace' &&
         event.target.tagName !== 'INPUT' &&
-        !$tools.guides:
+        !$tools.guides.enabled:
         event.preventDefault();
         deleteGleisActive();
         break;

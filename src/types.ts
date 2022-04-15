@@ -100,11 +100,27 @@ export interface SlopeConfig extends SlopeConfigBase {
 
 export type Slopes = Record<string, SlopeConfig>;
 
+export enum BlockDirection {
+  C1_C2 = 1,
+  C2_C1 = 2,
+  CX_CX = 3,
+}
+
+export interface Block {
+  id: string;
+  title: string;
+  occupied: boolean;
+  reserved: boolean;
+  direction: BlockDirection;
+  symbolAtPoint?: Point;
+}
+
+export type Blocks = Record<Block['id'], Block>;
+
 export interface GleisConfig {
   bridge?: 1;
   tunnel?: 1;
   feedback?: 1;
-  block?: 1;
   'wendel-connect'?: Point;
 }
 
@@ -113,6 +129,7 @@ export interface GleisPropsPlanned {
   artnr: string;
   type: GleisType;
   layerId: Layer['id'];
+  blockId: Block['id'];
   points: Point[];
   variant?: string;
   slope?: SlopeConfig;

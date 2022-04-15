@@ -205,41 +205,73 @@ export const slopes = db<Slopes>('slopes', {});
 export const guidesToolShapeType = writable('line');
 export const fillDialogActive = writable(false);
 
-type ZoomToolName = 'measure' | 'guides' | 'zoom' | 'routeSimulation';
+type ToolName = 'measure' | 'guides' | 'zoom' | 'routeSimulation' | 'block';
 export type ZoomState = { zoom: number; pan: Point };
 
 export const zoomzer = writable<SvgPanZoomInstance>();
 export const [currentZoom, setCurrentZoom] =
   appConfigValue<ZoomState>('currentZoom');
 
-export const tools = writable<Record<ZoomToolName, boolean>>({
-  measure: false,
-  guides: false,
-  zoom: false,
-  routeSimulation: false,
+interface ToolConfig {
+  enabled: boolean;
+  data?: any;
+  [key: string]: any;
+}
+
+interface BlockToolConfig extends ToolConfig {
+  action?: 'create' | 'update' | 'delete' | 'assignTo';
+}
+
+interface Tools {
+  block: BlockToolConfig;
+  measure: ToolConfig;
+  guides: ToolConfig;
+  zoom: ToolConfig;
+  routeSimulation: ToolConfig;
+}
+
+export const tools = writable<Tools>({
+  measure: { enabled: false },
+  guides: { enabled: false },
+  zoom: { enabled: false },
+  block: { enabled: false },
+  routeSimulation: { enabled: false },
 });
 
-export function disableAllButTools(toolName: ZoomToolName) {
+export function disableAllButTools(toolName: ToolName) {
   tools.update((tools) => {
-    for (const [name, tool] of Object.entries(tools).filter(
+    const toolsFiltered = Object.entries(tools).filter(
       ([name]) => name !== toolName
-    )) {
-      tools[name] = false;
+    );
+    for (const [name] of toolsFiltered) {
+      tools[name] = { enabled: false };
     }
     return tools;
   });
 }
 
-export function toggleTool(name: ZoomToolName) {
+export function toggleTool(name: ToolName, config?: Partial<Tools[ToolName]>) {
   tools.update((tools) => {
-    tools[name] = !tools[name];
+    const enabled = tools[name].enabled;
+
+    if (!enabled) {
+      tools[name] = {
+        ...tools[name],
+        ...(config ?? {}),
+        enabled: true,
+      };
+    } else {
+      tools[name] = { enabled: false };
+    }
+
     return tools;
   });
+
   disableAllButTools(name);
 }
 
 export function isAnyToolEnabled() {
-  return Object.values(get(tools)).some((enabled) => enabled);
+  return Object.values(get(tools)).some(({ enabled }) => enabled);
 }
 
 export const slopesCalculated = derived(slopes, (slopes) =>

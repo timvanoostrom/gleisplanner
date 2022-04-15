@@ -1,21 +1,24 @@
 <script lang="ts">
   import Gleis from './Gleis.svelte';
   import { trackLibByArtNr } from './config/trackLib';
-  import { gleisBezetz } from './store/gleis';
+  import {
+    gleisBezetz,
+    GleisLink,
+    gleisPlanned,
+    LinkedRoute,
+  } from './store/gleis';
 
-  $: bezetzCombos = Object.entries($gleisBezetz);
+  $: console.log($gleisBezetz);
 
   function getBezetzSegment(
-    id,
-    curPoint,
-    curGleis,
-    curConnectionType,
-    nextPoint,
-    nextGleis,
-    nextConnectionType
+    currentLinkIndex: number,
+    linkedRoute: LinkedRoute
   ) {
+    const [, , fromPoint, currentGleis] = linkedRoute[currentLinkIndex];
+    const [, , toPoint] = linkedRoute[currentLinkIndex + 1] || [];
+
     const segment =
-      curGleis.pathSegments
+      currentGleis.pathSegments
         ?.filter(
           (pathSegment) =>
             (pathSegment.type === 'main' || pathSegment.type === 'branch') &&
@@ -23,28 +26,23 @@
         )
         ?.find((pathSegment) => {
           return (
-            (pathSegment.points.includes(curPoint) &&
-              pathSegment.points.includes(nextPoint)) ||
-            (!nextPoint && pathSegment.points.includes(curPoint))
+            (pathSegment.points.includes(fromPoint) &&
+              pathSegment.points.includes(toPoint)) ||
+            (!toPoint && pathSegment.points.includes(fromPoint))
           );
-        })?.gleisType || '';
+        })
+        ?.d.toString() || '';
 
     return segment;
   }
 </script>
 
-{#each bezetzCombos as [id, [curPoint, curGleis, curConnectionType, nextPoint, nextGleis, nextConnectionType]]}
-  <Gleis
-    gleisProps={curGleis}
-    proto={$trackLibByArtNr[curGleis.artnr]}
-    bezetzSegment={getBezetzSegment(
-      id,
-      curPoint,
-      curGleis,
-      curConnectionType,
-      nextPoint,
-      nextGleis,
-      nextConnectionType
-    )}
-  />
+{#each $gleisBezetz as linkedRoute}
+  {#each linkedRoute as [fromPoint, fromGleis, toPoint, toGleis], index}
+    <Gleis
+      gleisProps={toGleis}
+      proto={$trackLibByArtNr[toGleis.artnr]}
+      bezetzSegment={getBezetzSegment(index, linkedRoute)}
+    />
+  {/each}
 {/each}

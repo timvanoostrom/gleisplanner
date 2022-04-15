@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import BezetzController from './BezetzController.svelte';
   import BezetzGleis from './BezetzGleis.svelte';
+  import Blocks from './Blocks.svelte';
+  import BlockSymbols from './BlockSymbols.svelte';
   import Button from './Button.svelte';
   import { trackLibByArtNr } from './config/trackLib';
   import ConnectionPane from './ConnectionPane.svelte';
@@ -27,8 +29,10 @@
   import SlopeConfig from './SlopeConfig.svelte';
   import SlopeInfo from './SlopeInfo.svelte';
   import { isAppConfigReady } from './store/appConfig';
+  import { getAssignedBlockByGleisId } from './store/blocks';
   import {
     gleisIdsActive,
+    gleisPlannedDB,
     gleisPlannedSelected,
     gleisPlannedSelectedByLayerId,
     gleisPlannedUnselectedByLayerId,
@@ -47,10 +51,9 @@
   } from './store/workspace';
   import TrackLibControl from './TrackLibControl.svelte';
 
-  $: isLoading = true;
-
   const tracksByArtNr = $trackLibByArtNr;
 
+  $: isLoading = true;
   $: isGleisModeActive = !isAnyToolEnabled();
 
   onMount(() => {
@@ -67,14 +70,29 @@
     <div class="PanelGroup">
       <GleisStats />
       <GleisConfig />
+
       <ControlMenuPanel title="Tools">
         <Button
-          isActive={$tools.measure}
+          isActive={$tools.block.enabled}
+          disabled={!$gleisIdsActive.length}
+          on:click={() =>
+            toggleTool('block', {
+              action: 'assignTo',
+              data: getAssignedBlockByGleisId($gleisIdsActive[0]),
+            })}
+        >
+          Assign block
+        </Button>
+        <Button
+          isActive={$tools.measure.enabled}
           on:click={() => toggleTool('measure')}
         >
           Measure line
         </Button>
-        <Button isActive={$tools.guides} on:click={() => toggleTool('guides')}>
+        <Button
+          isActive={$tools.guides.enabled}
+          on:click={() => toggleTool('guides')}
+        >
           Guides
         </Button>
         {#if $gleisPlannedSelected?.[0]?.type === 'Flex'}
@@ -85,7 +103,7 @@
             Cut path
           </Button>
         {/if}
-        {#if $tools.guides}
+        {#if $tools.guides.enabled}
           {#each ['line', 'rect'] as type}
             <Button
               isActive={$guidesToolShapeType === type}
@@ -99,19 +117,23 @@
             on:click={() => fillDialogActive.set(true)}>Fill</Button
           >
         {/if}
-        <Button isActive={$tools.zoom} on:click={() => toggleTool('zoom')}>
+        <Button
+          isActive={$tools.zoom.enabled}
+          on:click={() => toggleTool('zoom')}
+        >
           Zoom
         </Button>
-        {#if $tools.zoom}
+        {#if $tools.zoom.enabled}
           <Button on:click={() => $zoomzer.reset()}>Reset</Button>
         {/if}
         <Button
-          isActive={$tools.routeSimulation}
+          isActive={$tools.routeSimulation.enabled}
+          disabled={!$gleisIdsActive.length}
           on:click={() => toggleTool('routeSimulation')}
         >
           Route simulation
         </Button>
-        {#if $tools.routeSimulation}
+        {#if $tools.routeSimulation.enabled}
           <BezetzController />
         {/if}
       </ControlMenuPanel>
@@ -150,7 +172,8 @@
           selectionMode={isGleisModeActive}
         />
       {/if}
-      {#if $tools.routeSimulation}
+      <BlockSymbols />
+      {#if $tools.routeSimulation.enabled}
         <BezetzGleis />
       {/if}
 
@@ -159,7 +182,9 @@
       {/if}
       <ShortCurcuitConnections />
       <Guides />
-      <MeasureTool />
+      {#if $tools.measure.enabled}
+        <MeasureTool />
+      {/if}
       {#if isGleisModeActive}
         <PlaneTools />
       {/if}
@@ -168,6 +193,7 @@
 
   <SideMenu>
     <LayerControl />
+    <Blocks />
     <SavesControl />
     <GleisInventory />
     <GridControl />

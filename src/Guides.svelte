@@ -11,7 +11,7 @@
 </script>
 
 <g class="Guides">
-  {#if $tools.guides}
+  {#if $tools.guides.enabled}
     <GuidesControl />
   {:else}
     {#each $guidesInLayer as guide}

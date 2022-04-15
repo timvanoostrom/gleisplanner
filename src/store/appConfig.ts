@@ -51,7 +51,6 @@ export function db<T>(key: string, initialData: T) {
 
 export const appConfig = db('appConfig', APP_CONFIG_DEFAULT);
 export function isAppConfigReady() {
-  console.log('siiia', initializers);
   return Promise.all(initializers);
 }
 

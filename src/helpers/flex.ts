@@ -319,7 +319,10 @@ export function generateFlexPaths(
       d: mainPath,
       type: 'main',
       gleisType: 'Flex',
-      points: points.slice(0, 4).map((p) => getCoordString(p)),
+      points: points
+        .slice(0, 4)
+        .filter((p) => ['c1', 'c2'].includes(p.type))
+        .map((p) => getCoordString(p)),
     },
     {
       d: splitsPath,

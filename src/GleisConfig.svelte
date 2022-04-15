@@ -23,6 +23,7 @@
   {#each params as param}
     <Button
       isActive={configParamsActive.includes(param)}
+      disabled={!$gleisIdsActive.length}
       on:click={() => {
         if (configParamsActive.includes(param)) {
           unsetConfigItem({ ids: $gleisIdsActive, param });

@@ -20,15 +20,15 @@
   }
 </script>
 
-<g>
+<g class="HandleGroup">
   <title>
     {point.type} / {toDeg(point.connectAngle)}&deg; {point.direction}
   </title>
-  {#if label}
+  <!-- {#if label}
     <text x={point.x - (point.type === 'c2' ? 40 : -10)} y={point.y}>
       {label}
     </text>
-  {/if}
+  {/if} -->
   <circle class={`Handle ${point.type}`} cx={point.x} cy={point.y} r="8" />
   {#if x1 && y1 && x2 && y2}
     <line {x1} {y1} {x2} {y2} class="SplitLine" />
@@ -43,6 +43,12 @@
 </g>
 
 <style>
+  .HandleGroup {
+    opacity: 1;
+  }
+  :global(.control-panel-view) .HandleGroup {
+    opacity: 0;
+  }
   .HandleClick {
     fill: purple;
     fill-opacity: 0;

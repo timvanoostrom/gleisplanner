@@ -29,9 +29,11 @@
         if (!flexIndex[gleis.artnr]) {
           flexIndex[gleis.artnr] = 0;
         }
-        const lenCM = calculateTrackLengthCM(
-          gleis.pathSegments.find((segment) => segment.type === 'main')
-        );
+        const lenCM = gleis?.pathSegments
+          ? calculateTrackLengthCM(
+              gleis.pathSegments.find((segment) => segment.type === 'main')
+            )
+          : 0;
 
         flexIndex[gleis.artnr] += lenCM;
       } else {

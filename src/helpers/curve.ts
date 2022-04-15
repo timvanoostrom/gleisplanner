@@ -229,7 +229,10 @@ export function generateCurvePaths(
       d: mainPath,
       type: 'main',
       gleisType: 'Curve',
-      points: points.slice(0, 2).map((p) => getCoordString(p)),
+      points: points
+        .slice(0, 4)
+        .filter((p) => ['c1', 'c2'].includes(p.type))
+        .map((p) => getCoordString(p)),
     },
     path1,
     path2,

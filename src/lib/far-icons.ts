@@ -1,5 +1,3 @@
-import { downloadJSON } from '../helpers/app';
-
 const farIcons = {
   ad: 'f641',
   'address-book': 'f2b9',

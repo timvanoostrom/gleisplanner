@@ -73,20 +73,26 @@
       svgPanZoomzer.zoom($currentZoom.zoom || 1);
       svgPanZoomzer.pan($currentZoom.pan || { x: 0, y: 0 });
     });
-  });
 
-  tools.subscribe(({ zoom }) => {
-    if ($zoomzer) {
-      if (zoom) {
-        $zoomzer.disablePan();
-      } else {
-        $zoomzer.enablePan();
+    // console.log('on mount');
+
+    tools.subscribe(({ zoom }) => {
+      // console.log('zoom subscribed');
+      if ($zoomzer) {
+        if (zoom.enabled) {
+          // console.log('disablePan!!!');
+          $zoomzer.disablePan();
+          // console.log('zoom disabled!');
+        } else if (!$zoomzer.isPanEnabled()) {
+          $zoomzer.enablePan();
+          // console.log('zoom enabled!');
+        }
       }
-    }
+    });
   });
 
   function startDrag(event) {
-    if ($tools.zoom) {
+    if ($tools.zoom.enabled) {
       anchorPoint = svgCoords(event, $baseGroup as SVGGeometryElement);
       square.x = anchorPoint.x;
       square.y = anchorPoint.y;
@@ -96,7 +102,7 @@
   }
 
   function doDrag(event) {
-    if (anchorPoint && $tools.zoom) {
+    if (anchorPoint && $tools.zoom.enabled) {
       const point = svgCoords(event, $baseGroup as SVGGeometryElement);
       const width = point.x - anchorPoint.x - 5;
       const height = point.y - anchorPoint.y - 5;
@@ -119,7 +125,7 @@
   }
 
   function endDrag(event) {
-    if ($tools.zoom) {
+    if ($tools.zoom.enabled) {
       let currentZoom = $zoomzer.getZoom();
 
       const zoomPoint = createZoomPoint(square);
@@ -137,17 +143,18 @@
       square = { ...DEFAULT_SQUARE };
     }
   }
+
   let shiftPressed = false;
 
-  $: zoomIn = $tools.zoom && !shiftPressed;
-  $: zoomOut = $tools.zoom && shiftPressed;
+  $: zoomIn = $tools.zoom.enabled && !shiftPressed;
+  $: zoomOut = $tools.zoom.enabled && shiftPressed;
 
   function onKeyRouter(event) {
     shiftPressed = event.shiftKey;
   }
 
   function onKeyDownRouter(event) {
-    if (event.shiftKey || event.metaKey) {
+    if (event.metaKey) {
       $zoomzer.disablePan();
     }
     onKeyRouter(event);
@@ -166,7 +173,7 @@
 
 <svelte:window on:keydown={onKeyDownRouter} on:keyup={onKeyUpRouter} />
 
-{#if $tools.zoom}
+{#if $tools.zoom.enabled}
   <rect
     class="ZoomSpace"
     {x}

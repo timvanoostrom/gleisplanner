@@ -123,7 +123,7 @@
   }
 
   function onKeydownRouter(event) {
-    if ($tools.guides) {
+    if ($tools.guides.enabled) {
       switch (event.key) {
         // case 'a':
         // case 'A':

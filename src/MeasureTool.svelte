@@ -28,7 +28,7 @@
   }
 
   function moveEndPoint(event: MouseEvent) {
-    if ($tools.measure && p1 && !p2) {
+    if ($tools.measure.enabled && p1 && !p2) {
       try {
         const point = svgCoords(event, measureToolRef);
         if (event.shiftKey && p2Move) {
@@ -48,30 +48,29 @@
 </script>
 
 <svelte:window on:click={(event) => setPoint(event)} on:pointermove={move} />
-{#if $tools.measure}
-  <rect
-    class="MeasurePlane"
-    x={-$dimensions.width / 2}
-    y={-$dimensions.height / 2}
-    width={$dimensions.width}
-    height={$dimensions.height}
-  />
-  <g bind:this={measureToolRef}>
-    {#if p1 && p2Active}
-      <circle r="4" class="MeasurePoint" cx={p1.x} cy={p1.y} />
-      <line
-        x1={p1.x}
-        y1={p1.y}
-        x2={p2Active.x}
-        y2={p2Active.y}
-        class="MeasureLine"
-      />
-      <circle r="4" class="MeasurePoint" cx={center.x} cy={center.y} />
-      <text class="MeasureLabel" x={center.x} y={center.y}>{length}cm</text>
-      <circle r="4" class="MeasurePoint" cx={p2Active.x} cy={p2Active.y} />
-    {/if}
-  </g>
-{/if}
+
+<rect
+  class="MeasurePlane"
+  x={-$dimensions.width / 2}
+  y={-$dimensions.height / 2}
+  width={$dimensions.width}
+  height={$dimensions.height}
+/>
+<g bind:this={measureToolRef}>
+  {#if p1 && p2Active}
+    <circle r="4" class="MeasurePoint" cx={p1.x} cy={p1.y} />
+    <line
+      x1={p1.x}
+      y1={p1.y}
+      x2={p2Active.x}
+      y2={p2Active.y}
+      class="MeasureLine"
+    />
+    <circle r="4" class="MeasurePoint" cx={center.x} cy={center.y} />
+    <text class="MeasureLabel" x={center.x} y={center.y}>{length}cm</text>
+    <circle r="4" class="MeasurePoint" cx={p2Active.x} cy={p2Active.y} />
+  {/if}
+</g>
 
 <style>
   .MeasurePlane {

@@ -21,7 +21,7 @@
   let isDragActive: boolean = false;
   let anchorPoint;
 
-  $: isDragTranslateBlocked = $tools.zoom;
+  $: isDragTranslateBlocked = $tools.zoom.enabled;
 
   const saveViewboxTranslation = debounce((x: number, y: number) => {
     setViewBoxTranslation((translation) => {

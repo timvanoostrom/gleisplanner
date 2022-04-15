@@ -22,10 +22,6 @@
   } from './types';
   import SVGPathCommander from 'svg-path-commander';
 
-  let newSlopeTitle = '';
-  let newSlopePercentage = 0;
-  let newSlopeStartElevation = 0;
-  let editDialogSlopeId: SlopeConfig['id'] = '';
   let deleteDialogSlopeId: SlopeConfig['id'] = '';
   let slopeIdSelected: SlopeConfig['id'] = '';
 

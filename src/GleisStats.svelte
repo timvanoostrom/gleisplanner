@@ -1,7 +1,4 @@
 <script lang="ts">
-  import { tick } from 'svelte';
-  import { svgPathProperties } from 'svg-path-properties';
-
   import ControlMenuPanel from './ControlMenuPanel.svelte';
   import { calculateTrackLengthCM } from './helpers/geometry';
   import { gleisPlannedSelected } from './store/gleis';
