@@ -622,7 +622,14 @@ interface Conn {
   segmentType: string;
 }
 
-export const gleisBezetz = writable<LinkedRoute[]>([]);
+interface BezetzRoutes {
+  [routeId: string]: {
+    route: LinkedRoute;
+    activeLinkIndex: number;
+  };
+}
+
+export const gleisBezetz = writable<BezetzRoutes>({});
 
 // window.removeLastGleis = () => {
 //   const entries: Array<[string, GleisPropsPlanned]> = Object.entries(

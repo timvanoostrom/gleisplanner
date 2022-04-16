@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Button from './Button.svelte';
+  import { generateID } from './helpers/app';
   import { isWithinRadius } from './helpers/geometry';
   import { blocksDB } from './store/blocks';
   import {
@@ -12,7 +13,12 @@
     LinkedRoute,
     pointConnections,
   } from './store/gleis';
-  import type { GleisPropsPlanned, PathSegmentProps, Point } from './types';
+  import type {
+    GleisPlanned,
+    GleisPropsPlanned,
+    PathSegmentProps,
+    Point,
+  } from './types';
 
   function findPointByCoordString(points: Point[], str: string) {
     return points.find((p) => getCoordString(p) === str);
@@ -132,68 +138,68 @@
     return routes;
   }
 
-  /**
-   * 1. Select gleis/point to start from
-   *  - find adjacent point(s)
-   *  - get connected gleis at points
-   * 2. Find next suitable block(s)
-   * 3. Gather gleis/segment(s) to first gleis of suitable block
-   * 4. Repeat
-   * @param gleisById
-   * @param connectionsByCoordString
-   * @param startAtId
-   */
-
-  function* runSimulation(gleisId: GleisPropsPlanned['id']) {
-    gleisBezetz.set([]);
-    let gleis = $gleisPlanned[gleisId];
+  function findRoutes(fromId: GleisPropsPlanned['id']) {
+    let gleis = $gleisPlanned[fromId];
     // TODO: Decide which point to get here.
     let [point, point2] =
       gleis.pathSegments.find((s) => s.type === 'main')?.points || [];
 
-    while (true) {
-      const routes = findRoutesToAvailableBlock(gleisId, point2);
-      if (!routes.length) {
-        return;
-      }
-      yield routes;
-    }
+    const routes = findRoutesToAvailableBlock(gleis.id, point2);
+
+    return routes;
   }
 
-  let simulation: Generator<LinkedRoute[], void, unknown> = null;
+  let simulation: Generator<number, void, unknown> = null;
   let unsubscribe;
+  let isSimulationStarted: boolean = false;
+  let activeRoute: LinkedRoute = [];
+  let routes: LinkedRoute[] = [];
+  let routeId: string = '';
 
   function nextStep() {
-    if (!simulation) {
+    if (!isSimulationStarted) {
       const startAtId = $gleisIdsActive[0];
-      if (startAtId) {
-        simulation = runSimulation(startAtId);
+
+      routes = findRoutes(startAtId);
+
+      console.log('found routes', routes);
+
+      if (!routes.length) {
+        alert('Cannot start route, no route to available block found.');
       } else {
-        alert('Select start gleis');
-        return;
+        activeRoute = routes[0];
+        routeId = generateID();
+
+        gleisBezetz.update((bezetzRoutes) => {
+          bezetzRoutes[routeId] = {
+            route: activeRoute,
+            activeLinkIndex: 0,
+          };
+          return bezetzRoutes;
+        });
+
+        isSimulationStarted = true;
       }
-    }
-
-    // Call next
-    const nextBezetz = simulation.next();
-
-    if (nextBezetz.value) {
-      const bezetz = [nextBezetz.value[0]];
-      gleisBezetz.set(bezetz);
     } else {
-      stopSimulation();
+      gleisBezetz.update((bezetzRoutes) => {
+        let { activeLinkIndex, route } = bezetzRoutes[routeId];
+        if (!route[activeLinkIndex + 1]) {
+          activeLinkIndex = 0;
+        } else {
+          activeLinkIndex++;
+        }
+        bezetzRoutes[routeId].activeLinkIndex = activeLinkIndex;
+        return bezetzRoutes;
+      });
     }
   }
 
   function prevStep() {}
 
   export function stopSimulation() {
-    if (simulation) {
-      // alert('Simulation stopped.');
-      simulation?.return();
-      // gleisBezetz.set({});
-      simulation = null;
-    }
+    gleisBezetz.set({});
+    console.log('Simulation stopped.');
+    isSimulationStarted = false;
   }
 
   onDestroy(() => {

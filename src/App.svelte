@@ -128,7 +128,6 @@
         {/if}
         <Button
           isActive={$tools.routeSimulation.enabled}
-          disabled={!$gleisIdsActive.length}
           on:click={() => toggleTool('routeSimulation')}
         >
           Route simulation
