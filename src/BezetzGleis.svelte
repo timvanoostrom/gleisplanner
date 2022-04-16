@@ -31,15 +31,14 @@
             !!pathSegment.points?.length
         )
         ?.find((pathSegment) => {
-          const noGo = !toPoint && pathSegment.points.includes(fromPoint);
-          if (noGo) {
-            console.log(linkedRoute[currentLinkIndex]);
-          }
-          return (
-            (pathSegment.points.includes(fromPoint) &&
-              pathSegment.points.includes(toPoint)) ||
-            noGo
-          );
+          const isEndOfRoute =
+            !toPoint && pathSegment.points.includes(fromPoint);
+
+          const isConnectingSegment =
+            pathSegment.points.includes(fromPoint) &&
+            pathSegment.points.includes(toPoint);
+
+          return isConnectingSegment || isEndOfRoute;
         })
         ?.d.toString() || '';
 
