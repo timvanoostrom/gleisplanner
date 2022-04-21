@@ -1,4 +1,4 @@
-import type { PathSegmentProps, Point } from '../types';
+import type { GleisPropsPlanned, PathSegmentProps, Point } from '../types';
 import { getCoordString, pointConnections } from '../store/gleis';
 import { get } from 'svelte/store';
 
@@ -36,4 +36,44 @@ export function getConnectedPoints(points: Point[]) {
 export function isPointOccupied(point: Point) {
   const points = get(pointConnections)[getCoordString(point)];
   return points?.length >= 1;
+}
+
+export function findSegment(
+  from: GleisPropsPlanned,
+  fromPoint: string,
+  toPoint: string
+) {
+  const segment =
+    from.pathSegments
+      ?.filter(
+        (pathSegment) =>
+          (pathSegment.type === 'main' || pathSegment.type === 'branch') &&
+          !!pathSegment.points?.length
+      )
+      ?.find((pathSegment) => {
+        const isEndOfRoute = !toPoint && pathSegment.points.includes(fromPoint);
+
+        const isConnectingSegment =
+          pathSegment.points.includes(fromPoint) &&
+          pathSegment.points.includes(toPoint);
+
+        return isConnectingSegment || isEndOfRoute;
+      })
+      ?.d.toString() || '';
+
+  return segment;
+}
+
+export function convertToPoint(p: string) {
+  return p.split(',').reduce(
+    (acc, p, index) => {
+      if (index === 0) {
+        acc.x = parseFloat(p);
+      } else {
+        acc.y = parseFloat(p);
+      }
+      return acc;
+    },
+    { x: 0, y: 0 }
+  );
 }

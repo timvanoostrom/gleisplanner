@@ -279,7 +279,7 @@
   }}
   on:dblclick={(event) => {
     const isDeployable = !!event.target.closest('.Plane');
-    console.log(event.target, isDeployable);
+    // console.log(event.target, isDeployable);
     if (isDeployable && $connectFlexPointStart) {
       connectFlexPointStart.set(null);
       connectGleis({

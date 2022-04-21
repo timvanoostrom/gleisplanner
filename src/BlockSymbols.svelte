@@ -2,6 +2,7 @@
   import { getMidPoint } from './helpers/geometry';
   import { blockEntriesExtended, updateBlock } from './store/blocks';
   import { gleisPlannedDB } from './store/gleis';
+  import { toggleTool } from './store/workspace';
 
   $: blocks = Object.entries($blockEntriesExtended)
     .map(([id, block]) => {
@@ -32,7 +33,17 @@
 </script>
 
 {#each blocks as block}
-  <g>
+  <g
+    on:click={() => {
+      updateBlock({ id: block.id, occupied: !block.occupied });
+    }}
+    on:dblclick={() => {
+      toggleTool('block', {
+        action: 'update',
+        data: block,
+      });
+    }}
+  >
     <title>{block.title}</title>
     <rect
       x={block.symbolAtPoint.x}
@@ -41,9 +52,6 @@
       height="20px"
       class="BlockSymbol"
       class:is-occupied={block.occupied}
-      on:click={() => {
-        updateBlock({ id: block.id, occupied: !block.occupied });
-      }}
     />
   </g>
 {/each}

@@ -14,7 +14,7 @@ import type {
   Slopes,
 } from '../types';
 import { appConfig, appConfigValue, APP_CONFIG_DEFAULT, db } from './appConfig';
-import { gleisPlanned, gleisPlannedDB } from './gleis';
+import { gleisPlanned, gleisPlannedDB, setGleisIdActive } from './gleis';
 import {
   INITIAL_STATE as LAYERS_INITIAL_STATE,
   layerControl,
@@ -313,6 +313,10 @@ export const slopesByLayerId = derived(
 //     });
 //   });
 // };
+
+window.selectGleis = (id: string) => {
+  setGleisIdActive(id);
+};
 
 export const guidesInLayer = derived(
   [guides, layersById],

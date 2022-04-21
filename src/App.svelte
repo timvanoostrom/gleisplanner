@@ -31,12 +31,13 @@
   import { isAppConfigReady } from './store/appConfig';
   import { getAssignedBlockByGleisId } from './store/blocks';
   import {
+    gleisBezetz,
     gleisIdsActive,
-    gleisPlannedDB,
     gleisPlannedSelected,
     gleisPlannedSelectedByLayerId,
     gleisPlannedUnselectedByLayerId,
     isCutPathActive,
+    setGleisIdsActive,
     singleFlexActive,
   } from './store/gleis';
   import {
@@ -61,6 +62,18 @@
       isLoading = false;
     });
   });
+
+  function selectRoute(id: string) {
+    // const route = $gleisBezetz.routes[id];
+    // if (route) {
+    //   const ids = route.route.links.map((x) => x[3].id);
+    //   setGleisIdsActive(ids);
+    // }
+    gleisBezetz.update((bezetz) => {
+      bezetz.activeRouteId = id;
+      return bezetz;
+    });
+  }
 </script>
 
 <main class="App" class:isLoading>
@@ -135,6 +148,12 @@
         {#if $tools.routeSimulation.enabled}
           <BezetzController />
         {/if}
+        {#each Object.entries($gleisBezetz.routes) as [id], index}
+          <Button
+            isActive={id === $gleisBezetz.activeRouteId}
+            on:click={() => selectRoute(id)}>{index}</Button
+          >
+        {/each}
       </ControlMenuPanel>
     </div>
   </header>

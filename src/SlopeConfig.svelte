@@ -1,5 +1,6 @@
 <script lang="ts">
   import { get } from 'svelte/store';
+  import SVGPathCommander from 'svg-path-commander';
   import Button from './Button.svelte';
   import ControlMenuPanel from './ControlMenuPanel.svelte';
   import Dialog from './Dialog.svelte';
@@ -16,11 +17,9 @@
   import type {
     GleisPropsPlanned,
     PathSegmentProps,
-    Point,
     SlopeConfig,
     SlopeConfigBase,
   } from './types';
-  import SVGPathCommander from 'svg-path-commander';
 
   let deleteDialogSlopeId: SlopeConfig['id'] = '';
   let slopeIdSelected: SlopeConfig['id'] = '';
@@ -154,7 +153,7 @@
           [id]: {
             ...gleis,
             pathSegments: gleis.pathSegments.map((pathSegment) => {
-              const path = new SVGPathCommander(pathSegment.d);
+              const path = new SVGPathCommander(pathSegment.d, {});
               path.reverse();
               return {
                 ...pathSegment,

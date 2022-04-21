@@ -1,20 +1,11 @@
 <script lang="ts">
-  import Button from './Button.svelte';
-
   import GleisBridge from './GleisBridge.svelte';
   import GleisWendelConnect from './GleisWendelConnect.svelte';
-  import {
-    getCoordString,
-    gleisBezetz,
-    gleisIdsActive,
-    setGleisIdActive,
-  } from './store/gleis';
-  import { setConfigItem } from './store/gleisConfig';
+  import { gleisIdsActive, setGleisIdActive } from './store/gleis';
   import { layersById } from './store/layerControl';
   import type {
     GleisPropsPlanned,
     PathSegmentProps,
-    Point,
     ProtoGleis,
   } from './types';
 
@@ -83,6 +74,7 @@
   .main {
     stroke: black;
     stroke-opacity: 0;
+    stroke-width: 10px;
   }
   .branch {
     stroke: black;

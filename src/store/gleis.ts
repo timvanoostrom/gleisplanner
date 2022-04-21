@@ -52,8 +52,18 @@ export const protoGleisActive = derived(
     trackLib.find((track) => track.id === protoGleisIdActive)!
 );
 
-export const [gleisIdsActive, setGleisIdsActive] =
+export const [gleisIdsActive, setGleisIdsActive_] =
   appConfigValue<string[]>('gleisIdsActive');
+
+export function setGleisIdsActive(
+  value: string[] | ((value: string[]) => string[])
+) {
+  if (Array.isArray(value)) {
+    return setGleisIdsActive_(Array.from(new Set(value)));
+  } else {
+    return setGleisIdsActive_((x) => Array.from(new Set(value(x))));
+  }
+}
 
 export function setGleisIdActive(id: string, isMulti: boolean = false) {
   setGleisIdsActive((ids) => {
@@ -420,6 +430,7 @@ export function connectGleis({ pointOrigin, flexPoints }: ConnectGleisProps) {
     layerId,
     type,
     pathSegments: [],
+    blockId: '',
   };
 
   updateGleis([gleis]);
@@ -617,19 +628,30 @@ export type GleisLink = [
 
 export type LinkedRoute = GleisLink[];
 
-interface Conn {
-  gleisType: string;
-  segmentType: string;
+export interface Route {
+  id: string;
+  links: GleisLink[];
+  linkedList: any;
+  path: string;
+  length: number;
 }
 
-interface BezetzRoutes {
-  [routeId: string]: {
-    route: LinkedRoute;
-    activeLinkIndex: number;
+export interface BezetzRoutes {
+  routes: {
+    [routeId: string]: {
+      route: Route;
+      activeLinkIndex: number;
+    };
   };
+  activeRouteId: string;
 }
 
-export const gleisBezetz = writable<BezetzRoutes>({});
+export const GLEIS_BEZETZ_DEFAULT = {
+  routes: {},
+  activeRouteId: '',
+};
+
+export const gleisBezetz = writable<BezetzRoutes>(GLEIS_BEZETZ_DEFAULT);
 
 // window.removeLastGleis = () => {
 //   const entries: Array<[string, GleisPropsPlanned]> = Object.entries(

@@ -94,7 +94,6 @@
     width="260px"
     isOpen={true}
     on:close={() => {
-      console.log('onclose!!');
       toggleTool('block');
     }}
     on:created={() => {}}
