@@ -631,7 +631,6 @@ export type LinkedRoute = GleisLink[];
 export interface Route {
   id: string;
   links: GleisLink[];
-  linkedList: any;
   path: string;
   length: number;
 }

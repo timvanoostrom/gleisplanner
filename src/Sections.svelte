@@ -6,17 +6,17 @@
   import Dialog from './Dialog.svelte';
   import Icon from './Icon.svelte';
   import {
-    createBlock,
+    createSection,
     assignTo,
     blocksDB,
-    deleteBlock,
-    updateBlock,
+    deleteSection,
+    updateSection,
     blockEntriesExtended,
-  } from './store/blocks';
+  } from '././store/sections';
   import { gleisIdsActive, gleisPlanned } from './store/gleis';
 
   import { toggleTool, tools } from './store/workspace';
-  import { Block, BlockDirection } from './types';
+  import { Section, SectionDirection } from './types';
 
   $: blockIdActive = $gleisIdsActive
     .map((id) => $gleisPlanned[id])
@@ -26,7 +26,7 @@
   let okLabel: string = '';
 
   $: {
-    switch ($tools.block.action) {
+    switch ($tools.section.action) {
       case 'create':
         okLabel = 'Add';
         break;
@@ -43,41 +43,41 @@
   }
 </script>
 
-<ControlMenuPanel flex={false} toggle={true} title="Blocks">
+<ControlMenuPanel flex={false} toggle={true} title="Sections">
   <div slot="header-right">
     <Button
       on:click={() =>
-        toggleTool('block', {
+        toggleTool('section', {
           action: 'create',
-          data: { title: 'X-B#', direction: BlockDirection.C1_C2 },
+          data: { title: 'X-B#', direction: SectionDirection.C1_C2 },
         })}
     >
       Add
     </Button>
   </div>
   <ul class="List">
-    {#each $blockEntriesExtended as block}
+    {#each $blockEntriesExtended as section}
       <li
         class="ListItem"
-        class:isBlockSelected={block.id === $tools.block.data?.id}
+        class:isSectionSelected={section.id === $tools.section.data?.id}
       >
         <h4 class="ListItem-title">
-          <span role="button" class="BlockName" on:click={() => void 0}>
-            {block.title}
+          <span role="button" class="SectionName" on:click={() => void 0}>
+            {section.title}
           </span>
-          <span>{block.totalLength}cm</span>
+          <span>{section.totalLength}cm</span>
         </h4>
         <span class="ListItem-buttons">
           <Button
             on:click={() =>
-              toggleTool('block', { action: 'update', data: block })}
+              toggleTool('section', { action: 'update', data: section })}
           >
             <Icon name="pencil-alt" size={12} />
           </Button>
           <Button
             on:click={() => {
-              if (confirm('Delete block?')) {
-                deleteBlock(block.id);
+              if (confirm('Delete section?')) {
+                deleteSection(section.id);
               }
             }}>&times;</Button
           >
@@ -87,65 +87,68 @@
   </ul>
 </ControlMenuPanel>
 
-{#if $tools.block.enabled}
+{#if $tools.section.enabled}
   <Dialog
-    id="BlocksDialog"
+    id="SectionsDialog"
     height="160px"
     width="260px"
     isOpen={true}
     on:close={() => {
-      toggleTool('block');
+      toggleTool('section');
     }}
     on:created={() => {}}
   >
     <div class="DialogContent">
-      {#if $tools.block.action == 'create' || $tools.block.action == 'update'}
-        <input placeholder="Block title" bind:value={$tools.block.data.title} />
-        <div class="BlockDirection-radios">
+      {#if $tools.section.action == 'create' || $tools.section.action == 'update'}
+        <input
+          placeholder="Section title"
+          bind:value={$tools.section.data.title}
+        />
+        <div class="SectionDirection-radios">
           <h4>Direction</h4>
           <label>
             <input
               type="radio"
-              bind:group={$tools.block.data.direction}
+              bind:group={$tools.section.data.direction}
               name="blockDirection"
-              value={BlockDirection.C1_C2}
+              value={SectionDirection.C1_C2}
             />
             C1 &mdash; C2
           </label>
           <label>
             <input
               type="radio"
-              bind:group={$tools.block.data.direction}
+              bind:group={$tools.section.data.direction}
               name="blockDirection"
-              value={BlockDirection.C2_C1}
+              value={SectionDirection.C2_C1}
             />
             C2 &mdash; C1
           </label>
           <label>
             <input
               type="radio"
-              bind:group={$tools.block.data.direction}
+              bind:group={$tools.section.data.direction}
               name="blockDirection"
-              value={BlockDirection.CX_CX}
+              value={SectionDirection.CX_CX}
             />
             CX &mdash; CX
           </label>
         </div>
       {/if}
 
-      {#if $tools.block.action == 'assignTo'}
-        <select bind:value={$tools.block.data}>
-          {#each Object.entries($blocksDB) as [id, block]}
-            <option value={block}>{block.title}</option>
+      {#if $tools.section.action == 'assignTo'}
+        <select bind:value={$tools.section.data}>
+          {#each Object.entries($blocksDB) as [id, section]}
+            <option value={section}>{section.title}</option>
           {/each}
         </select>
       {/if}
 
-      {#if $tools.block.action == 'delete'}
-        <p>Select block to delete.</p>
-        <select bind:value={$tools.block.data}>
-          {#each Object.entries($blocksDB) as [id, block]}
-            <option value={block}>{block.title}</option>
+      {#if $tools.section.action == 'delete'}
+        <p>Select section to delete.</p>
+        <select bind:value={$tools.section.data}>
+          {#each Object.entries($blocksDB) as [id, section]}
+            <option value={section}>{section.title}</option>
           {/each}
         </select>
       {/if}
@@ -153,28 +156,28 @@
     <footer class="DialogFooter">
       <Button
         on:click={() => {
-          switch ($tools.block.action) {
+          switch ($tools.section.action) {
             case 'create':
-              createBlock($tools.block.data);
+              createSection($tools.section.data);
               break;
             case 'update':
-              updateBlock($tools.block.data);
+              updateSection($tools.section.data);
               break;
             case 'assignTo':
-              assignTo($tools.block.data.id, $gleisIdsActive);
+              assignTo($tools.section.data.id, $gleisIdsActive);
               break;
             case 'delete':
-              deleteBlock($tools.block.data.selectedBlock.id);
+              deleteSection($tools.section.data.selectedSection.id);
               break;
           }
 
-          toggleTool('block');
+          toggleTool('section');
         }}>{okLabel}</Button
       >
       <Button
         variant="plain"
         on:click={() => {
-          toggleTool('block');
+          toggleTool('section');
         }}
       >
         Cancel
@@ -187,14 +190,14 @@
   .DialogContent {
     padding-bottom: 1rem;
   }
-  .BlockDirection-radios {
+  .SectionDirection-radios {
     padding: 1rem 0;
   }
-  .BlockDirection-radios h4 {
+  .SectionDirection-radios h4 {
     margin: 0;
   }
-  .BlockDirection-radios label {
-    display: block;
+  .SectionDirection-radios label {
+    display: section;
   }
 
   .List {
@@ -216,7 +219,7 @@
   .ListItem-buttons {
     display: flex;
   }
-  .isBlockSelected {
+  .isSectionSelected {
     background-color: thistle;
   }
 </style>

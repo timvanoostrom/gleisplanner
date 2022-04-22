@@ -1,21 +1,26 @@
 import { generateID } from '../helpers/app';
-import type { Block, Blocks, GleisPlanned, GleisPropsPlanned } from 'src/types';
+import type {
+  Section,
+  Sections,
+  GleisPlanned,
+  GleisPropsPlanned,
+} from 'src/types';
 import { db } from './appConfig';
 import { gleisPlanned, gleisPlannedDB, updateGleis } from './gleis';
 import { derived, get } from 'svelte/store';
 import { calculateTrackLengthCM } from '../helpers/geometry';
 
-export const blocksDB = db<Blocks>('blocks', {});
+export const blocksDB = db<Sections>('blocks', {});
 
-export function createBlock(
-  block: Omit<Block, 'id' | 'occupied' | 'reserved'>
+export function createSection(
+  section: Omit<Section, 'id' | 'occupied' | 'reserved'>
 ) {
   const id = generateID();
-  updateBlock({ ...block, id, occupied: false, reserved: false });
+  updateSection({ ...section, id, occupied: false, reserved: false });
 }
 
 export function assignTo(
-  blockId: Block['id'],
+  blockId: Section['id'],
   gleisIds: Array<GleisPropsPlanned['id']>
 ) {
   updateGleis(
@@ -28,17 +33,19 @@ export function assignTo(
   );
 }
 
-export function updateBlock(block: Partial<Block> & { id: Block['id'] }) {
+export function updateSection(
+  section: Partial<Section> & { id: Section['id'] }
+) {
   blocksDB.update((blocks) => {
-    blocks[block.id] = {
-      ...blocks[block.id],
-      ...(block ?? {}),
+    blocks[section.id] = {
+      ...blocks[section.id],
+      ...(section ?? {}),
     };
     return blocks;
   });
 }
 
-export function deleteBlock(id: Block['id']) {
+export function deleteSection(id: Section['id']) {
   blocksDB.update((blocks) => {
     delete blocks[id];
     return blocks;
@@ -58,7 +65,7 @@ export function deleteBlock(id: Block['id']) {
   });
 }
 
-export function getAssignedBlockByGleisId(id: GleisPropsPlanned['id']) {
+export function getAssignedSectionByGleisId(id: GleisPropsPlanned['id']) {
   const gleis = get(gleisPlannedDB)[id];
   const blockId = gleis.blockId;
   const blocks = get(blocksDB);
@@ -67,32 +74,32 @@ export function getAssignedBlockByGleisId(id: GleisPropsPlanned['id']) {
     return null;
   }
 
-  const block = blocks[blockId];
+  const section = blocks[blockId];
 
-  return block;
+  return section;
 }
 
-const gleisPlannedByBlockId = derived(gleisPlanned, (gleisPlanned) => {
-  const byBlockId: Record<Block['id'], GleisPropsPlanned[]> = {};
+const gleisPlannedBySectionId = derived(gleisPlanned, (gleisPlanned) => {
+  const bySectionId: Record<Section['id'], GleisPropsPlanned[]> = {};
   for (const gleis of Object.values(gleisPlanned)) {
     if (gleis.blockId) {
-      if (!byBlockId[gleis.blockId]) {
-        byBlockId[gleis.blockId] = [gleis];
+      if (!bySectionId[gleis.blockId]) {
+        bySectionId[gleis.blockId] = [gleis];
       } else {
-        byBlockId[gleis.blockId].push(gleis);
+        bySectionId[gleis.blockId].push(gleis);
       }
     }
   }
-  return byBlockId;
+  return bySectionId;
 });
 
 export const blockEntriesExtended = derived(
-  [blocksDB, gleisPlannedByBlockId],
-  ([blocks, gleisPlannedByBlockId]) => {
-    return Object.entries(blocks).map(([id, block]) => {
-      const gleisAttached = gleisPlannedByBlockId[id] || [];
+  [blocksDB, gleisPlannedBySectionId],
+  ([blocks, gleisPlannedBySectionId]) => {
+    return Object.entries(blocks).map(([id, section]) => {
+      const gleisAttached = gleisPlannedBySectionId[id] || [];
       return {
-        ...block,
+        ...section,
         gleisAttached,
         totalLength: gleisAttached.reduce((acc, gleis) => {
           return (

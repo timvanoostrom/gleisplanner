@@ -205,7 +205,7 @@ export const slopes = db<Slopes>('slopes', {});
 export const guidesToolShapeType = writable('line');
 export const fillDialogActive = writable(false);
 
-type ToolName = 'measure' | 'guides' | 'zoom' | 'routeSimulation' | 'block';
+type ToolName = 'measure' | 'guides' | 'zoom' | 'routeSimulation' | 'section';
 export type ZoomState = { zoom: number; pan: Point };
 
 export const zoomzer = writable<SvgPanZoomInstance>();
@@ -218,12 +218,12 @@ interface ToolConfig {
   [key: string]: any;
 }
 
-interface BlockToolConfig extends ToolConfig {
+interface SectionToolConfig extends ToolConfig {
   action?: 'create' | 'update' | 'delete' | 'assignTo';
 }
 
 interface Tools {
-  block: BlockToolConfig;
+  section: SectionToolConfig;
   measure: ToolConfig;
   guides: ToolConfig;
   zoom: ToolConfig;
@@ -234,7 +234,7 @@ export const tools = writable<Tools>({
   measure: { enabled: false },
   guides: { enabled: false },
   zoom: { enabled: false },
-  block: { enabled: false },
+  section: { enabled: false },
   routeSimulation: { enabled: false },
 });
 

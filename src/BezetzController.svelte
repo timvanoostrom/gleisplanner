@@ -4,7 +4,7 @@
   import { generateID } from './helpers/app';
   import { isWithinRadius } from './helpers/geometry';
   import { findSegment } from './helpers/gleis';
-  import { blocksDB } from './store/blocks';
+  import { blocksDB } from './store/sections';
   import {
     BezetzRoutes,
     getCoordString,
@@ -58,7 +58,7 @@
     return connectingRouteSegments;
   }
 
-  function findRoutesToAvailableBlock(
+  function findRoutesToAvailableSection(
     gleisId: GleisPropsPlanned['id'],
     curPoint: string,
     routeGleisGleisLinks: LinkedRoute = [],
@@ -112,7 +112,7 @@
       }
     );
 
-    // Candidates without block
+    // Candidates without section
     const connectionCandidates = connectedGleis.filter(
       ([fromPoint, fromGleis, toPoint, toGleis]) => {
         return !!toGleis && !toGleis?.blockId;
@@ -120,7 +120,7 @@
     );
 
     for (const candidateGleisLink of blockCandidates) {
-      // TODO: Push all gleisID's in this block (via getAllGleisIdsInBlock(candidate.blockId))
+      // TODO: Push all gleisID's in this section (via getAllGleisIdsInSection(candidate.blockId))
       routes.push([...routeGleisGleisLinks, candidateGleisLink]);
     }
 
@@ -130,7 +130,7 @@
       toPoint,
       toGleis,
     ] of connectionCandidates) {
-      findRoutesToAvailableBlock(
+      findRoutesToAvailableSection(
         toGleis.id,
         toPoint,
         [...routeGleisGleisLinks],
@@ -157,7 +157,7 @@
     let routes = [];
 
     if (point) {
-      routes = findRoutesToAvailableBlock(gleis.id, point);
+      routes = findRoutesToAvailableSection(gleis.id, point);
     }
 
     return routes;
@@ -190,7 +190,7 @@
 
       if (fromPoint !== getCoordString(start)) {
         const path = new SVGPathCommander(segment, {});
-        path.reverse();
+        (path as any).reverse();
         segment = path.toString();
       }
 
@@ -228,7 +228,7 @@
       console.log('found routes', routes);
 
       if (!routes.length) {
-        alert('Cannot start route, no route to available block found.');
+        alert('Cannot start route, no route to available section found.');
       } else {
         // Remove starting link so route will activate next link first
         gleisBezetz.update((bezetz) => {

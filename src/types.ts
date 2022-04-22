@@ -100,22 +100,22 @@ export interface SlopeConfig extends SlopeConfigBase {
 
 export type Slopes = Record<string, SlopeConfig>;
 
-export enum BlockDirection {
+export enum SectionDirection {
   C1_C2 = 1,
   C2_C1 = 2,
   CX_CX = 3,
 }
 
-export interface Block {
+export interface Section {
   id: string;
   title: string;
   occupied: boolean;
   reserved: boolean;
-  direction: BlockDirection;
+  direction: SectionDirection;
   symbolAtPoint?: Point;
 }
 
-export type Blocks = Record<Block['id'], Block>;
+export type Sections = Record<Section['id'], Section>;
 
 export interface GleisConfig {
   bridge?: 1;
@@ -129,7 +129,7 @@ export interface GleisPropsPlanned {
   artnr: string;
   type: GleisType;
   layerId: Layer['id'];
-  blockId: Block['id'];
+  blockId: Section['id'];
   points: Point[];
   variant?: string;
   slope?: SlopeConfig;

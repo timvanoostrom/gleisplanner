@@ -2,8 +2,8 @@
   import { onMount } from 'svelte';
   import BezetzController from './BezetzController.svelte';
   import BezetzGleis from './BezetzGleis.svelte';
-  import Blocks from './Blocks.svelte';
-  import BlockSymbols from './BlockSymbols.svelte';
+  import Sections from './Sections.svelte';
+  import SectionSymbols from './SectionSymbols.svelte';
   import Button from './Button.svelte';
   import { trackLibByArtNr } from './config/trackLib';
   import ConnectionPane from './ConnectionPane.svelte';
@@ -29,7 +29,7 @@
   import SlopeConfig from './SlopeConfig.svelte';
   import SlopeInfo from './SlopeInfo.svelte';
   import { isAppConfigReady } from './store/appConfig';
-  import { getAssignedBlockByGleisId } from './store/blocks';
+  import { getAssignedSectionByGleisId } from './store/sections';
   import {
     gleisBezetz,
     gleisIdsActive,
@@ -86,15 +86,15 @@
 
       <ControlMenuPanel title="Tools">
         <Button
-          isActive={$tools.block.enabled}
+          isActive={$tools.section.enabled}
           disabled={!$gleisIdsActive.length}
           on:click={() =>
-            toggleTool('block', {
+            toggleTool('section', {
               action: 'assignTo',
-              data: getAssignedBlockByGleisId($gleisIdsActive[0]),
+              data: getAssignedSectionByGleisId($gleisIdsActive[0]),
             })}
         >
-          Assign block
+          Assign section
         </Button>
         <Button
           isActive={$tools.measure.enabled}
@@ -190,7 +190,7 @@
           selectionMode={isGleisModeActive}
         />
       {/if}
-      <BlockSymbols />
+      <SectionSymbols />
       {#if $tools.routeSimulation.enabled}
         <BezetzGleis />
       {/if}
@@ -211,7 +211,7 @@
 
   <SideMenu>
     <LayerControl />
-    <Blocks />
+    <Sections />
     <SavesControl />
     <GleisInventory />
     <GridControl />
