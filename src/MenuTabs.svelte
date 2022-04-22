@@ -1,10 +1,8 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import Button from './Button.svelte';
+  import type { Tab } from './types';
 
-  interface Tab {
-    title: string;
-  }
   const dispatch = createEventDispatcher();
 
   export let tabs: Tab[] = [];
@@ -21,16 +19,18 @@
 </script>
 
 <div class="MenuTabs">
-  <div class="TabHead">
-    {#each tabs as tab, index}
-      <Button
-        on:click={() => selectTab(`tab-${index + 1}`)}
-        isActive={selectedTabId === `tab-${index + 1}`}
-      >
-        {tab.title}
-      </Button>
-    {/each}
-  </div>
+  {#if tabs.length}
+    <div class="TabHead">
+      {#each tabs as tab, index}
+        <Button
+          on:click={() => selectTab(`tab-${index + 1}`)}
+          isActive={selectedTabId === `tab-${index + 1}`}
+        >
+          {tab.title}
+        </Button>
+      {/each}
+    </div>
+  {/if}
   <div class="MenuTabsContent">
     {#if selectedTabId === 'tab-1'}<slot name="tab-1" />{/if}
     {#if selectedTabId === 'tab-2'}<slot name="tab-2" />{/if}
@@ -47,5 +47,6 @@
 
 <style>
   .MenuTabsContent {
+    padding: 1rem 0;
   }
 </style>

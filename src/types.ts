@@ -236,3 +236,7 @@ export interface TrackLib {
   title: string;
   gleis: ProtoGleis<ProtoGleisSegment>[];
 }
+
+export interface Tab {
+  title: string;
+}

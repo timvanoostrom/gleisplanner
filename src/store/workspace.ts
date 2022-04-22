@@ -219,7 +219,7 @@ interface ToolConfig {
 }
 
 interface SectionToolConfig extends ToolConfig {
-  action?: 'create' | 'update' | 'delete' | 'assignTo';
+  action?: 'create' | 'update' | 'delete' | 'addTo';
 }
 
 interface Tools {

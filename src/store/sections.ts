@@ -19,7 +19,7 @@ export function createSection(
   updateSection({ ...section, id, occupied: false, reserved: false });
 }
 
-export function assignTo(
+export function addTo(
   blockId: Section['id'],
   gleisIds: Array<GleisPropsPlanned['id']>
 ) {

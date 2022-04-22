@@ -90,11 +90,11 @@
           disabled={!$gleisIdsActive.length}
           on:click={() =>
             toggleTool('section', {
-              action: 'assignTo',
+              action: 'addTo',
               data: getAssignedSectionByGleisId($gleisIdsActive[0]),
             })}
         >
-          Assign section
+          Add section
         </Button>
         <Button
           isActive={$tools.measure.enabled}
