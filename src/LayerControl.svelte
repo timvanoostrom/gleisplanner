@@ -208,7 +208,7 @@
 
 <svelte:window on:keydown={onKeydownRouter} />
 
-<ControlMenuPanel flex={false} toggle={true} title="Layers">
+<ControlMenuPanel flex={false} mode="toggle" title="Layers">
   <div slot="header-right">
     {#if !mergeLayerIds.length}
       <Button

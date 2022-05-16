@@ -46,7 +46,7 @@
   .HandleGroup {
     opacity: 1;
   }
-  :global(.control-panel-view) .HandleGroup {
+  :global(.operation-mode-control) .HandleGroup {
     opacity: 0;
   }
   .HandleClick {

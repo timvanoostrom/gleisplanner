@@ -11,7 +11,7 @@
 <ControlMenuPanel
   flex={false}
   startMinimized={true}
-  toggle={true}
+  mode="toggle"
   title="Selected gleis data"
 >
   <IconButton
@@ -29,10 +29,16 @@
             </div>
             <pre>
           {JSON.stringify(
-            { ...gleis, points: gleis.points.map(p => ({ ...p, connectAngle: toDeg(p.connectAngle||0) })) },
-            null,
-            ' '
-          )}
+                {
+                  ...gleis,
+                  points: gleis.points.map((p) => ({
+                    ...p,
+                    connectAngle: toDeg(p.connectAngle || 0),
+                  })),
+                },
+                null,
+                ' '
+              )}
         </pre>
           </li>
         {/each}

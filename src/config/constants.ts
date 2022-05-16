@@ -18,4 +18,4 @@ export const MIN_SCALE = 0.1;
 export const ROOT_POINT_ORIGIN_DIRECTION = Direction.R;
 export const ROOT_POINT_ORIGIN_CONNECT_ANGLE = -A90;
 
-export const GLEISPLAN_NAME_DEFAULT = '1629620107621-gleisplan-default.json';
+export const GLEISPLAN_NAME_DEFAULT = 'gleisplan-default-v2.json';

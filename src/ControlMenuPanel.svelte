@@ -3,11 +3,12 @@
 
   export let title = '';
   export let dropdown: boolean = false;
+  export let mode: 'hover' | 'click' | 'toggle' = 'hover';
   export let flex: boolean = true;
-  export let toggle: boolean = false;
   export let startMinimized: boolean = false;
+  export let startOpen: boolean = false;
 
-  let isOpen = false;
+  $: isOpen = startOpen;
   $: isMinimized = startMinimized;
 
   function showMenu() {
@@ -25,12 +26,12 @@
   class:dropdown
   class:isOpen
   class:flex
-  on:mouseenter={showMenu}
-  on:mouseleave={hideMenu}
+  on:mouseenter={() => mode === 'hover' && showMenu()}
+  on:mouseleave={() => mode === 'hover' && hideMenu()}
 >
   {#if title}
     <header>
-      {#if toggle}
+      {#if mode === 'toggle'}
         <Button
           className="toggle"
           variant="plain"
@@ -41,7 +42,12 @@
       {/if}
       <h4>
         {#if dropdown}
-          <Button variant="plain">{title}</Button>
+          <Button
+            variant="plain"
+            on:click={() =>
+              mode === 'click' && (isOpen ? hideMenu() : showMenu())}
+            >{title}</Button
+          >
         {:else}
           {title}
         {/if}
@@ -82,6 +88,12 @@
     --ControlMenuPanel-DropdownPanel-border-color: #000;
     --ControlMenuPanel-DropdownPanel-border-width: 1px;
   }
+  .ControlMenuPanel {
+    margin-left: 10px;
+  }
+  .ControlMenuPanel:first-child {
+    margin-left: 0;
+  }
   .PanelContent {
     max-height: 400px;
     overflow-y: scroll;
@@ -90,7 +102,7 @@
     display: var(--ControlMenuPanel-display, flex);
   }
   h4 {
-    margin: 0 10px 0 0;
+    margin: 0 5px 0 0;
     /* z-index: 9; */
     background-color: #fff;
     position: relative;
@@ -115,7 +127,7 @@
     transition: opacity 100 ease-in-out;
     position: absolute;
     min-width: 160px;
-    max-width: 300px;
+    /* max-width: 300px; */
     background-color: #fff;
     border: var(--ControlMenuPanel-DropdownPanel-border-width) solid
       var(--ControlMenuPanel-DropdownPanel-border-color);

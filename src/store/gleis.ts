@@ -4,7 +4,7 @@ import {
   ROOT_POINT_ORIGIN_DIRECTION,
 } from '../config/constants';
 import { trackLib, trackLibByArtNr } from '../config/trackLib';
-import { generateID, round } from '../helpers/app';
+import { generateID, jsonCopy, round } from '../helpers/app';
 import {
   calculateCrossingPoints,
   generateCrossingPaths,
@@ -30,6 +30,7 @@ import {
   generateTurnoutCurvedPaths,
 } from '../helpers/turnoutCurved';
 import type {
+  Block,
   GleisPlanned,
   GleisPropsPlanned,
   PathSegmentProps,
@@ -43,6 +44,7 @@ import type {
 } from '../types';
 import { appConfigValue, db } from './appConfig';
 import { activeLayer, layerControl, layersById } from './layerControl';
+import type { Loco } from './workspace';
 
 export const protoGleisIdActive = appConfigValue<string>('protoGleisIdActive');
 
@@ -55,6 +57,9 @@ export const protoGleisActive = derived(
 export const [gleisIdsActive, setGleisIdsActive_] =
   appConfigValue<string[]>('gleisIdsActive');
 
+export const [controlGleisIdsActive, setControlGleisIdsActive_] =
+  appConfigValue<string[]>('controlGleisIdsActive');
+
 export function setGleisIdsActive(
   value: string[] | ((value: string[]) => string[])
 ) {
@@ -62,6 +67,16 @@ export function setGleisIdsActive(
     return setGleisIdsActive_(Array.from(new Set(value)));
   } else {
     return setGleisIdsActive_((x) => Array.from(new Set(value(x))));
+  }
+}
+
+export function setControlGleisIdsActive(
+  value: string[] | ((value: string[]) => string[])
+) {
+  if (Array.isArray(value)) {
+    return setControlGleisIdsActive_(Array.from(new Set(value)));
+  } else {
+    return setControlGleisIdsActive_((x) => Array.from(new Set(value(x))));
   }
 }
 
@@ -431,6 +446,7 @@ export function connectGleis({ pointOrigin, flexPoints }: ConnectGleisProps) {
     type,
     pathSegments: [],
     blockId: '',
+    sectionId: '',
   };
 
   updateGleis([gleis]);
@@ -635,22 +651,69 @@ export interface Route {
   length: number;
 }
 
-export interface BezetzRoutes {
-  routes: {
-    [routeId: string]: {
-      route: Route;
-      activeLinkIndex: number;
-    };
-  };
-  activeRouteId: string;
+export interface BezetzRoute {
+  route: Route;
+  activeLinkIndex: number;
+  activePathSegments: string[];
 }
 
-export const GLEIS_BEZETZ_DEFAULT = {
+export interface LocoRoutes {
+  routes: {
+    [routeId: string]: BezetzRoute;
+  };
+  activeRouteId: string;
+  departureBlockID: Block['id'];
+  destinationBlockID: Block['id'];
+}
+
+export interface BezetzRoutes {
+  [locoID: string]: LocoRoutes;
+}
+
+export function setActiveRouteId(locoID: string, routeID: string) {
+  gleisBezetz.update((gleisBezetz) => {
+    gleisBezetz[locoID].routes[routeID].activeLinkIndex = 0;
+    gleisBezetz[locoID].routes[routeID].activePathSegments = [];
+    gleisBezetz[locoID].activeRouteId = routeID;
+    return gleisBezetz;
+  });
+}
+
+export const GLEIS_LOCO_ROUTES_DEFAULT: LocoRoutes = {
   routes: {},
   activeRouteId: '',
+  departureBlockID: '',
+  destinationBlockID: '',
 };
 
-export const gleisBezetz = writable<BezetzRoutes>(GLEIS_BEZETZ_DEFAULT);
+// TODO: Make this filling dynamic
+export const GLEIS_BEZETZ_DEFAULT: BezetzRoutes = {
+  br218_0334: jsonCopy(GLEIS_LOCO_ROUTES_DEFAULT),
+  br103_01: jsonCopy(GLEIS_LOCO_ROUTES_DEFAULT),
+};
+
+export const gleisBezetz = db<BezetzRoutes>(
+  'gleisBezetz',
+  jsonCopy(GLEIS_BEZETZ_DEFAULT)
+);
+
+export const activeRouteSegments = derived(gleisBezetz, (gleisBezetz) => {
+  return Object.entries(gleisBezetz).flatMap(([locoID, gleisBezetz]) => {
+    const activeRoute: BezetzRoute =
+      gleisBezetz?.routes?.[gleisBezetz?.activeRouteId];
+    return activeRoute?.activePathSegments || [];
+  });
+});
+
+export function getLocoRoutes(locoID: Loco['id']): LocoRoutes {
+  return get(gleisBezetz)?.[locoID];
+}
+
+export function getActiveRoute(locoID: Loco['id']) {
+  const locoRoutes = getLocoRoutes(locoID);
+  const bezetzRoute = locoRoutes?.routes[locoRoutes?.activeRouteId];
+  return bezetzRoute || null;
+}
 
 // window.removeLastGleis = () => {
 //   const entries: Array<[string, GleisPropsPlanned]> = Object.entries(

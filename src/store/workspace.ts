@@ -1,10 +1,11 @@
 import { derived, get, writable } from 'svelte/store';
-import { MAX_SCALE, MIN_SCALE } from '../config/constants';
+import svgPanZoom from 'svg-pan-zoom';
 import { activeTrackLibId, setActiveTrackLibId } from '../config/trackLib';
 import { downloadJSON, generateID } from '../helpers/app';
 import type {
   Dimensions,
   GleisPlanSaved,
+  GleisPropsPlanned,
   Guide,
   Guides,
   Layer,
@@ -13,6 +14,7 @@ import type {
   SlopeConfig,
   Slopes,
 } from '../types';
+import { SectionDirection } from '../types';
 import { appConfig, appConfigValue, APP_CONFIG_DEFAULT, db } from './appConfig';
 import { gleisPlanned, gleisPlannedDB, setGleisIdActive } from './gleis';
 import {
@@ -20,7 +22,7 @@ import {
   layerControl,
   layersById,
 } from './layerControl';
-import svgPanZoom from 'svg-pan-zoom';
+import { blocksDB, sectionsDB } from './sections';
 
 const svgPanZoomInstance = svgPanZoom;
 type SvgPanZoomInstance = typeof svgPanZoomInstance;
@@ -114,16 +116,18 @@ export function importSavedConfig(
         ...importedGleis,
       };
     });
+    alert('Sections and blocks not merged...');
   } else {
     layerControl.set(config.layerControl);
     gleisPlannedDB.set(config.gleisPlanned);
     appConfig.set(config.appConfig);
     guides.set(config.guides);
+    sectionsDB.set(config.sections);
     saveGleisPlan(config.id, config.name);
   }
 }
 
-function createSavedConfig(id: string, name: string) {
+function createSavedConfig(id: string, name: string): SavedConfig {
   _l('createsaved', id, name);
   return {
     id,
@@ -134,6 +138,8 @@ function createSavedConfig(id: string, name: string) {
     appConfig: get(appConfig),
     guides: get(guides),
     dateUpdated: new Date().toLocaleString('nl-nl'),
+    sections: get(sectionsDB),
+    blocks: get(blocksDB),
   };
 }
 
@@ -222,8 +228,13 @@ interface SectionToolConfig extends ToolConfig {
   action?: 'create' | 'update' | 'delete' | 'addTo';
 }
 
+interface BlockToolConfig extends ToolConfig {
+  action?: 'create' | 'update' | 'delete' | 'addTo';
+}
+
 interface Tools {
   section: SectionToolConfig;
+  block: BlockToolConfig;
   measure: ToolConfig;
   guides: ToolConfig;
   zoom: ToolConfig;
@@ -235,6 +246,7 @@ export const tools = writable<Tools>({
   guides: { enabled: false },
   zoom: { enabled: false },
   section: { enabled: false },
+  block: { enabled: false },
   routeSimulation: { enabled: false },
 });
 
@@ -381,4 +393,78 @@ export function removeGuide(ids: Array<Guide['id']>) {
   guides.update((guides) => {
     return guides.filter((guide) => !ids.includes(guide.id));
   });
+}
+
+export type OperationsMode = 'build' | 'control';
+
+export const operationsMode = writable<OperationsMode>('control');
+
+export function toggleOperationsMode() {
+  operationsMode.update((opMode) => {
+    return opMode === 'build' ? 'control' : 'build';
+  });
+}
+
+export interface Loco {
+  id: string;
+  title: string;
+  atPoint?: Point;
+  direction: SectionDirection;
+  velocity: number;
+}
+
+export interface Locos {
+  [id: string]: Loco;
+}
+
+export const locosDB = db<Locos>('locos', {
+  br218_0334: {
+    id: 'br218_0334',
+    title: 'BR218 -- 0334',
+    direction: SectionDirection.C1_C2,
+    velocity: 0,
+  },
+  br103_01: {
+    id: 'br103_01',
+    title: 'BR103 -- 01',
+    direction: SectionDirection.C1_C2,
+    velocity: 0,
+  },
+});
+
+export const activeLocoID = writable<string>('');
+
+export function updateLoco(locoID: string, updatePayload: Partial<Loco>) {
+  locosDB.update((locosDB) => {
+    const loco = locosDB[locoID];
+    if (updatePayload) {
+      locosDB[locoID] = {
+        ...loco,
+        ...updatePayload,
+        id: locoID,
+      };
+    }
+    return locosDB;
+  });
+}
+
+export function setBlockActiveByGleisId(gleisID: GleisPropsPlanned['id']) {
+  const blockIds = derived(
+    [sectionsDB, gleisPlannedDB],
+    ([sectionsDB, gleisPlannedDB]) => {
+      const sectionID = gleisPlannedDB[gleisID].sectionId;
+      const section = sectionsDB[sectionID];
+      const blockId = section.blockId;
+      const sectionIdsInBlock = Object.entries(sectionsDB)
+        .filter(([id, section]) => {
+          return section.blockId === blockId;
+        })
+        .map(([id]) => id);
+      const gleisIdsInBlock = Object.entries(gleisPlannedDB)
+        .filter(([id, gleis]) => {
+          return sectionIdsInBlock.includes(gleis.sectionId);
+        })
+        .map(([id]) => id);
+    }
+  );
 }

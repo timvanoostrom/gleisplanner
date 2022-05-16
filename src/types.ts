@@ -10,6 +10,7 @@ export interface AppConfig {
   gleisPlanSaveIdSelected?: string;
   viewBoxTranslation: Point | null;
   gleisIdsActive: string[];
+  controlGleisIdsActive: string[];
   trackLibQuickSelect: Record<string, string>;
   sidebarState: SidebarState;
   activeTrackLibId: string;
@@ -109,18 +110,23 @@ export enum SectionDirection {
 export interface Section {
   id: string;
   title: string;
-  occupied: boolean;
-  reserved: boolean;
-  direction: SectionDirection;
+  isActivated: boolean;
   symbolAtPoint?: Point;
+  blockId?: string;
 }
 
 export type Sections = Record<Section['id'], Section>;
 
+export interface Block {
+  id: string;
+  title: string;
+}
+
+export type Blocks = Record<Block['id'], Block>;
+
 export interface GleisConfig {
   bridge?: 1;
   tunnel?: 1;
-  feedback?: 1;
   'wendel-connect'?: Point;
 }
 
@@ -130,6 +136,7 @@ export interface GleisPropsPlanned {
   type: GleisType;
   layerId: Layer['id'];
   blockId: Section['id'];
+  sectionId: Section['id'];
   points: Point[];
   variant?: string;
   slope?: SlopeConfig;
@@ -197,6 +204,8 @@ export interface SavedConfig {
   layerControl: LayerControl;
   appConfig: AppConfig;
   guides: Guides;
+  sections: Sections;
+  blocks: Blocks;
   dateUpdated: string;
   activeTrackLibId: string;
 }

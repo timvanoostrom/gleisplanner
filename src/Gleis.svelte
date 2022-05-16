@@ -3,22 +3,14 @@
   import GleisWendelConnect from './GleisWendelConnect.svelte';
   import { gleisIdsActive, setGleisIdActive } from './store/gleis';
   import { layersById } from './store/layerControl';
-  import type {
-    GleisPropsPlanned,
-    PathSegmentProps,
-    ProtoGleis,
-  } from './types';
+  import { operationsMode } from './store/workspace';
+  import type { GleisPropsPlanned, ProtoGleis } from './types';
 
   export let gleisProps: GleisPropsPlanned;
   export let proto: ProtoGleis;
   export let disabled: boolean = false;
-  export let bezetzSegment: string = '';
 
   let node: SVGGElement;
-
-  function isBezetz(pathSegment: PathSegmentProps): boolean {
-    return bezetzSegment === pathSegment.d.toString();
-  }
 
   $: isActive = $gleisIdsActive.includes(gleisProps.id);
   $: gleisLayerPatternId = $layersById[gleisProps.layerId]?.patternId || '';
@@ -31,12 +23,16 @@
   id={gleisProps.id}
   class="Gleis"
   class:isActive
-  class:hasTunnel={!!gleisProps?.config?.tunnel && !bezetzSegment}
-  class:hasBridge={!!gleisProps?.config?.bridge && !bezetzSegment}
+  class:hasTunnel={!!gleisProps?.config?.tunnel}
+  class:hasBridge={!!gleisProps?.config?.bridge}
   on:click={(event) => {
     if (!disabled) {
       event.stopPropagation();
-      setGleisIdActive(gleisProps.id, event.shiftKey);
+      if ($operationsMode === 'control') {
+        setGleisIdActive(gleisProps.id);
+      } else {
+        setGleisIdActive(gleisProps.id, event.shiftKey);
+      }
     }
   }}
   style={`--gleis-fill-color:${gleisFillColor};${
@@ -51,11 +47,7 @@
       <GleisBridge {gleisProps} />
     {/if}
     {#each gleisProps.pathSegments as pathSegment, index (pathSegment)}
-      <path
-        d={pathSegment.d.toString()}
-        class={`spath ${pathSegment.type}`}
-        class:bezetz={isBezetz(pathSegment)}
-      />
+      <path d={pathSegment.d.toString()} class={`spath ${pathSegment.type}`} />
     {/each}
   {/if}
 
@@ -114,31 +106,12 @@
   .hasTunnel .spath {
     opacity: 0.4;
   }
-  .branch.bezetz,
-  .main.bezetz {
-    stroke-dasharray: 4px 4px;
-    stroke-opacity: 1;
-    stroke: purple;
-    stroke-width: 10px;
-  }
+
   .connect {
     stroke: red;
     stroke-width: 2px;
   }
   .AddPoint {
     fill: red;
-  }
-  :global(.control-panel-view) .main {
-    stroke-opacity: 1;
-    /* stroke-width: 0.3em; */
-  }
-  :global(.control-panel-view) .splits,
-  :global(.control-panel-view) .p2,
-  :global(.control-panel-view) .p1 {
-    stroke-opacity: 0;
-  }
-  :global(.control-panel-view) .Gleis:hover .outer,
-  :global(.control-panel-view) .outer {
-    fill-opacity: 0;
   }
 </style>

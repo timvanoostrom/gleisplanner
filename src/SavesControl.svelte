@@ -69,7 +69,7 @@
 <ControlMenuPanel
   flex={false}
   startMinimized={true}
-  toggle={true}
+  mode="toggle"
   title="Save configuration"
 >
   <select

@@ -65,7 +65,7 @@
   title="Inventory"
   flex={false}
   startMinimized={true}
-  toggle={true}
+  mode="toggle"
 >
   <div class="InventoryContent">
     <table class="inventoryTable">

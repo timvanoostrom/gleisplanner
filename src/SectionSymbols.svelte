@@ -1,10 +1,14 @@
 <script lang="ts">
   import { getMidPoint } from './helpers/geometry';
-  import { blockEntriesExtended, updateSection } from './store/sections';
+  import {
+    sectionEntriesExtended,
+    sectionIdsSelected,
+    selectSection,
+  } from './store/sections';
   import { gleisPlannedDB } from './store/gleis';
   import { toggleTool } from './store/workspace';
 
-  $: blocks = Object.entries($blockEntriesExtended)
+  $: sections = Object.entries($sectionEntriesExtended)
     .map(([id, section]) => {
       if (section.symbolAtPoint) {
         return section;
@@ -28,40 +32,71 @@
       return null;
     })
     .filter((x) => x !== null);
-
-  // $: console.log(blocks);
 </script>
 
-{#each blocks as section}
+{#each sections as section}
   <g
-    on:click={() => {
-      updateSection({ id: section.id, occupied: !section.occupied });
+    on:click={(event) => {
+      // updateSection({ id: section.id, isActivated: !section.isActivated });
+      selectSection(section.id, !event.shiftKey);
     }}
     on:dblclick={() => {
-      toggleTool('section', {
-        action: 'update',
-        data: section,
-      });
+      // toggleTool('section', {
+      //   action: 'update',
+      //   data: section,
+      // });
     }}
   >
     <title>{section.title}</title>
-    <rect
+    <text
       x={section.symbolAtPoint.x}
-      y={section.symbolAtPoint.y}
-      width="30px"
-      height="20px"
+      y={section.symbolAtPoint.y - 20}
+      class="BlockLabel">{section.blockTitle}</text
+    >
+    <rect
+      x={section.symbolAtPoint.x - 20}
+      y={section.symbolAtPoint.y - 15}
+      width="40px"
+      height="30px"
       class="SectionSymbol"
-      class:is-occupied={section.occupied}
+      class:is-activated={section.isActivated}
+      class:is-selected={$sectionIdsSelected.includes(section.id)}
     />
+    {#if !!section.blockId}
+      <circle
+        r="8"
+        cx={section.symbolAtPoint.x}
+        cy={section.symbolAtPoint.y}
+        class="SectionSymbol-block"
+      />
+    {/if}
   </g>
 {/each}
 
 <style>
   .SectionSymbol {
-    fill: green;
+    fill: lightgreen;
     cursor: pointer;
   }
-  .SectionSymbol.is-occupied {
+  .SectionSymbol.is-activated {
     fill: red;
+  }
+  .SectionSymbol.is-selected {
+    fill: blue;
+    /* paint-order: stroke; */
+  }
+  .SectionSymbol.is-selected + .SectionSymbol-block {
+    fill: lightblue;
+  }
+  .SectionSymbol.SectionSymbol.is-activated + .SectionSymbol-block {
+    fill: darkred;
+  }
+  .SectionSymbol-block {
+    fill: green;
+  }
+  .BlockLabel {
+    width: 50px;
+    font-size: 2.4em;
+    text-anchor: middle;
   }
 </style>

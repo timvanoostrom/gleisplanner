@@ -189,7 +189,7 @@
 <ControlMenuPanel
   flex={false}
   startMinimized={true}
-  toggle={true}
+  mode="toggle"
   title="Slopes"
 >
   <div slot="header-right">

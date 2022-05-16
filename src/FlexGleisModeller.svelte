@@ -38,7 +38,6 @@
       : null;
 
   onMount(() => {
-    console.info('FlexModeller active', !!$singleFlexActive);
     if ($singleFlexActive) {
       flexPoints = $singleFlexActive.points;
     }

@@ -1,40 +1,31 @@
 <script lang="ts">
+  import {
+    addTo,
+    createSection,
+    deleteSection,
+    sectionEntriesExtended,
+    sectionIdsSelected,
+    sectionsDB,
+    selectSection,
+    updateSection,
+  } from '././store/sections';
   import Button from './Button.svelte';
   import ControlMenuPanel from './ControlMenuPanel.svelte';
   import Dialog from './Dialog.svelte';
   import Icon from './Icon.svelte';
-  import {
-    createSection,
-    addTo,
-    blocksDB,
-    deleteSection,
-    updateSection,
-    blockEntriesExtended,
-  } from '././store/sections';
   import { gleisIdsActive, gleisPlanned } from './store/gleis';
-
   import { toggleTool, tools } from './store/workspace';
-  import { Section, SectionDirection, Tab } from './types';
-  import MenuTabs from './MenuTabs.svelte';
+  import { SectionDirection } from './types';
 
   $: blockIdActive = $gleisIdsActive
     .map((id) => $gleisPlanned[id])
     .find((gleisPropsPlanned) => !!gleisPropsPlanned?.blockId)?.blockId;
-  $: blockActive = blockIdActive && $blocksDB[blockIdActive];
+  $: blockActive = blockIdActive && $sectionsDB[blockIdActive];
 
   let okLabel: string = 'Ok';
-  let tabs: Tab[] = [];
-
-  $: {
-    switch ($tools.section.action) {
-      case 'addTo':
-        tabs = [{ title: 'Add section' }, { title: 'New section' }];
-        break;
-    }
-  }
 </script>
 
-<ControlMenuPanel flex={false} toggle={true} title="Sections">
+<ControlMenuPanel flex={false} mode="toggle" title="Sections">
   <div slot="header-right">
     <Button
       on:click={() =>
@@ -47,16 +38,24 @@
     </Button>
   </div>
   <ul class="List">
-    {#each $blockEntriesExtended as section}
+    {#each $sectionEntriesExtended as section}
       <li
         class="ListItem"
-        class:isSectionSelected={section.id === $tools.section.data?.id}
+        class:isSectionSelected={$sectionIdsSelected.includes(section.id)}
       >
-        <h4 class="ListItem-title">
+        <h4
+          class="ListItem-title"
+          on:click={(event) => selectSection(section.id, !event.shiftKey)}
+        >
           <span role="button" class="SectionName" on:click={() => void 0}>
             {section.title}
           </span>
           <span>{section.totalLength}cm</span>
+          {#if !!section.blockId}
+            <span class="Block-assigned" title={section.blockTitle}>
+              {section.blockTitle}
+            </span>
+          {/if}
         </h4>
         <span class="ListItem-buttons">
           <Button
@@ -91,99 +90,91 @@
     on:created={() => {}}
   >
     <div class="DialogContent">
-      <MenuTabs {tabs}>
-        <div slot="tab-1">
-          {#if $tools.section.action == 'create' || $tools.section.action == 'update'}
+      {#if $tools.section.action == 'create' || $tools.section.action == 'update'}
+        <input
+          placeholder="Section title"
+          bind:value={$tools.section.data.title}
+        />
+        <div class="SectionDirection-radios">
+          <h4>Direction</h4>
+          <label>
             <input
-              placeholder="Section title"
-              bind:value={$tools.section.data.title}
+              type="radio"
+              bind:group={$tools.section.data.direction}
+              name="blockDirection"
+              value={SectionDirection.C1_C2}
             />
-            <div class="SectionDirection-radios">
-              <h4>Direction</h4>
-              <label>
-                <input
-                  type="radio"
-                  bind:group={$tools.section.data.direction}
-                  name="blockDirection"
-                  value={SectionDirection.C1_C2}
-                />
-                C1 &mdash; C2
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  bind:group={$tools.section.data.direction}
-                  name="blockDirection"
-                  value={SectionDirection.C2_C1}
-                />
-                C2 &mdash; C1
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  bind:group={$tools.section.data.direction}
-                  name="blockDirection"
-                  value={SectionDirection.CX_CX}
-                />
-                CX &mdash; CX
-              </label>
-            </div>
-          {/if}
-
-          {#if $tools.section.action == 'addTo'}
-            <select
-              class="Select-availableBlocks"
-              bind:value={$tools.section.data}
-            >
-              {#each Object.entries($blocksDB) as [id, section]}
-                <option value={section}>{section.title}</option>
-              {/each}
-            </select>
-          {/if}
-
-          {#if $tools.section.action == 'delete'}
-            <p>
-              Are you sure you want to delete <strong
-                >{$tools.section.data.title}</strong
-              > ?
-            </p>
-          {/if}
-          <footer class="DialogFooter">
-            <Button
-              disabled={!$tools.section.data?.id}
-              on:click={() => {
-                switch ($tools.section.action) {
-                  case 'create':
-                    createSection($tools.section.data);
-                    break;
-                  case 'update':
-                    updateSection($tools.section.data);
-                    break;
-                  case 'addTo':
-                    if ($tools.section.data.id) {
-                      addTo($tools.section.data.id, $gleisIdsActive);
-                    }
-                    break;
-                  case 'delete':
-                    deleteSection($tools.section.data.id);
-                    break;
-                }
-
-                toggleTool('section');
-              }}>{okLabel}</Button
-            >
-            <Button
-              variant="plain"
-              on:click={() => {
-                toggleTool('section');
-              }}
-            >
-              Cancel
-            </Button>
-          </footer>
+            C1 &mdash; C2
+          </label>
+          <label>
+            <input
+              type="radio"
+              bind:group={$tools.section.data.direction}
+              name="blockDirection"
+              value={SectionDirection.C2_C1}
+            />
+            C2 &mdash; C1
+          </label>
+          <label>
+            <input
+              type="radio"
+              bind:group={$tools.section.data.direction}
+              name="blockDirection"
+              value={SectionDirection.CX_CX}
+            />
+            CX &mdash; CX
+          </label>
         </div>
-        <div slot="tab-2" />
-      </MenuTabs>
+      {/if}
+
+      {#if $tools.section.action == 'addTo'}
+        <select class="Select-availableBlocks" bind:value={$tools.section.data}>
+          {#each Object.entries($sectionsDB) as [id, section]}
+            <option value={section}>{section.title}</option>
+          {/each}
+        </select>
+      {/if}
+
+      {#if $tools.section.action == 'delete'}
+        <p>
+          Are you sure you want to delete <strong
+            >{$tools.section.data.title}</strong
+          > ?
+        </p>
+      {/if}
+      <footer class="DialogFooter">
+        <Button
+          disabled={!$tools.section.data?.id}
+          on:click={() => {
+            switch ($tools.section.action) {
+              case 'create':
+                createSection($tools.section.data);
+                break;
+              case 'update':
+                updateSection($tools.section.data);
+                break;
+              case 'addTo':
+                if ($tools.section.data.id) {
+                  addTo($tools.section.data.id, $gleisIdsActive);
+                }
+                break;
+              case 'delete':
+                deleteSection($tools.section.data.id);
+                break;
+            }
+
+            toggleTool('section');
+          }}>{okLabel}</Button
+        >
+        <Button
+          variant="plain"
+          on:click={() => {
+            toggleTool('section');
+          }}
+        >
+          Cancel
+        </Button>
+      </footer>
     </div>
   </Dialog>
 {/if}
@@ -229,5 +220,16 @@
   }
   .Select-availableBlocks {
     min-width: 100px;
+  }
+  .Block-assigned {
+    display: inline-block;
+    max-width: 50px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid #000;
+    font-size: 8px;
+    font-weight: normal;
+    white-space: nowrap;
+    padding: 1px 3px;
   }
 </style>

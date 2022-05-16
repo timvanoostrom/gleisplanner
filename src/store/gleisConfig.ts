@@ -9,12 +9,7 @@ import { get } from 'svelte/store';
 
 export type Param = keyof GleisConfig;
 
-export const params: Param[] = [
-  'feedback',
-  'wendel-connect',
-  'bridge',
-  'tunnel',
-];
+export const params: Param[] = ['wendel-connect', 'bridge', 'tunnel'];
 
 export interface ToggleConfigItemProps {
   ids: Array<GleisPropsPlanned['id']>;

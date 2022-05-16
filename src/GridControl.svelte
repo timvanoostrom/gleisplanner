@@ -20,7 +20,7 @@
   }
 </script>
 
-<ControlMenuPanel flex={false} startMinimized={true} toggle={true} title="Grid">
+<ControlMenuPanel flex={false} startMinimized={true} mode="toggle" title="Grid">
   <Button variant="plain" on:click={() => setGridVisible(!$isGridVisible)}>
     <Icon name={!$isGridVisible ? 'eye-slash' : 'eye'} />
   </Button>

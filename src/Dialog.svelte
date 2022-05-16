@@ -6,7 +6,7 @@
   export let id: string;
   export let isOpen: boolean = false;
   export let modal: boolean = true;
-  export let height: string = 'auto';
+  export let height: string = 'fit-content';
   export let width: string = '260px';
 
   let dialog: HTMLDialogElement;

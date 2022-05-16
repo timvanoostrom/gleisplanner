@@ -9,6 +9,7 @@ export const APP_CONFIG_DEFAULT: AppConfig = {
   currentZoom: { zoom: 1, pan: { x: 0, y: 0 } },
   protoGleisIdActive: 'roco-42441',
   gleisIdsActive: [],
+  controlGleisIdsActive: [],
   viewBoxTranslation: null,
   trackLibQuickSelect: null,
   sidebarState: 'visible',

@@ -1,118 +1,83 @@
 <script lang="ts">
-  import { trackLibByArtNr } from './config/trackLib';
-  import Gleis from './Gleis.svelte';
-  import { convertToPoint, findSegment } from './helpers/gleis';
-  import {
-    gleisBezetz,
-    gleisIdsActive,
-    LinkedRoute,
-    setGleisIdActive,
-  } from './store/gleis';
+  import throttle from 'lodash.throttle';
   import Loco from './Loco.svelte';
-  import type { Point } from './types';
+  import { gleisBezetz } from './store/gleis';
   import { planeSvg } from './store/plane';
+  import {
+    getBezetzSegment,
+    resetRoutes,
+    setLocoAtPoint,
+    stopLoco,
+  } from './store/sections';
+  import { locosDB } from './store/workspace';
+  import type { Point } from './types';
 
-  $: activeRoute = $gleisBezetz.routes[$gleisBezetz.activeRouteId];
+  function detectGleis(locoID: string, point: Point) {
+    const isDetected = (pathSegment: string) => {
+      const svgPoint = $planeSvg.createSVGPoint();
+      const path = document.querySelector(`path[d="${pathSegment}"]`);
 
-  function getBezetzSegment(
-    currentLinkIndex: number,
-    linkedRoute: LinkedRoute
-  ) {
-    const fromLink = linkedRoute[currentLinkIndex];
-    const toLink = linkedRoute[currentLinkIndex + 1];
+      svgPoint.x = point.x;
+      svgPoint.y = point.y;
 
-    const [, , fromPoint, from] = fromLink;
-    const [, , toPoint, to] = toLink || [];
+      return (path as SVGPathElement).isPointInStroke(svgPoint);
+    };
 
-    return findSegment(from, fromPoint, toPoint);
-  }
+    const locoRoutes = $gleisBezetz[locoID];
+    const activeRoute = locoRoutes.routes[locoRoutes.activeRouteId];
+    const { route, activeLinkIndex = 0 } = activeRoute;
+    const nextActiveLinkIndex = activeLinkIndex + 1;
+    const activePathSegments = activeRoute?.activePathSegments;
 
-  function prevLinkTo(route, activeLinkIndex) {
-    return route[activeLinkIndex - 1] && route[activeLinkIndex - 1][3];
-  }
-
-  function calculatePathDuration(length: number) {
-    return '20s';
-  }
-
-  const svgPoint = $planeSvg.createSVGPoint();
-
-  let fromIndex = 0;
-  let i = 0;
-
-  function detectGleis(p: CustomEvent<Point>) {
-    // const { x, y } = convertToPoint(p.detail);
-    // const el = document.elementFromPoint(p.detail.x, p.detail.y);
-    // console.log('el',el)
-    i = 0;
-    for (const link of $gleisBezetz.routes[
-      $gleisBezetz.activeRouteId
-    ].route.links.slice(fromIndex)) {
-      const to = link[3];
-
-      svgPoint.x = p.detail.x;
-      svgPoint.y = p.detail.y;
-
-      const paths = Array.from(
-        document.querySelectorAll(`#${to.id} .spath.main`)
-      );
-
-      const isDetected = paths.some((el: SVGPathElement) =>
-        el.isPointInStroke(svgPoint)
-      );
-
-      if (isDetected && !$gleisIdsActive.includes(to.id)) {
-        fromIndex = i;
-        setGleisIdActive(to.id);
-      }
-      if (isDetected) {
-        break;
-      }
-
-      i += 1;
+    if (activePathSegments?.length && isDetected(activePathSegments[0])) {
+      return;
     }
+
+    const pathSegment = getBezetzSegment(activeLinkIndex, route.links);
+    const isDetected1 = isDetected(pathSegment);
+    const pathSegment2 = getBezetzSegment(nextActiveLinkIndex, route.links);
+    const pathSegments = [pathSegment, pathSegment2];
+
+    gleisBezetz.update((bezetz) => {
+      bezetz[locoID].routes[route.id].activeLinkIndex = !isDetected1
+        ? nextActiveLinkIndex
+        : activeLinkIndex;
+      bezetz[locoID].routes[route.id].activePathSegments = pathSegments;
+      return bezetz;
+    });
   }
+
+  function completeLocoRoute(locoID: string) {
+    console.log('complete');
+
+    const { destinationBlockID } = $gleisBezetz[locoID];
+
+    resetRoutes(locoID, {
+      departureBlockID: destinationBlockID,
+      destinationBlockID: '',
+    });
+
+    stopLoco(locoID);
+  }
+
+  const saveLocoAtPoint = throttle(setLocoAtPoint, 400);
+
+  // $: locosWithActiveRoute = Object.entries($gleisBezetz).filter(
+  //   ([locoID]) => !!getActiveRoute(locoID)
+  // );
+  $: locos = Object.entries($gleisBezetz);
 </script>
 
-{#if activeRoute}
-  {#if prevLinkTo(activeRoute.route.links, activeRoute.activeLinkIndex)}
-    <Gleis
-      gleisProps={prevLinkTo(
-        activeRoute.route.links,
-        activeRoute.activeLinkIndex
-      )}
-      proto={$trackLibByArtNr[
-        prevLinkTo(activeRoute.route.links, activeRoute.activeLinkIndex).artnr
-      ]}
-      bezetzSegment={getBezetzSegment(
-        activeRoute.activeLinkIndex - 1,
-        activeRoute.route.links
-      )}
-    />
-  {/if}
-  <Gleis
-    gleisProps={activeRoute.route.links[activeRoute.activeLinkIndex][3]}
-    proto={$trackLibByArtNr[
-      activeRoute.route.links[activeRoute.activeLinkIndex][3].artnr
-    ]}
-    bezetzSegment={getBezetzSegment(
-      activeRoute.activeLinkIndex,
-      activeRoute.route.links
-    )}
+{#each locos as [locoID, gleisBezetz]}
+  <Loco
+    on:pointAt={({ detail: point }) => {
+      detectGleis(locoID, point);
+      saveLocoAtPoint(locoID, point);
+    }}
+    on:arrivedAt={({ detail: point }) => {
+      completeLocoRoute(locoID);
+    }}
+    path={gleisBezetz.routes?.[gleisBezetz.activeRouteId]?.route.path || ''}
+    loco={$locosDB[locoID]}
   />
-  {#if $gleisBezetz?.routes[$gleisBezetz.activeRouteId]}
-    <Loco
-      on:pointAt={detectGleis}
-      path={$gleisBezetz.routes[$gleisBezetz.activeRouteId].route.path}
-    />
-  {/if}
-  <!-- {#if activeRoute.route.path}
-    <circle r="25" fill="red">
-      <animateMotion
-        dur={calculatePathDuration(activeRoute.route.length)}
-        repeatCount="indefinite"
-        path={activeRoute.route.path}
-      />
-    </circle>
-  {/if} -->
-{/if}
+{/each}

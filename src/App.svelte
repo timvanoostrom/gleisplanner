@@ -2,11 +2,10 @@
   import { onMount } from 'svelte';
   import BezetzController from './BezetzController.svelte';
   import BezetzGleis from './BezetzGleis.svelte';
-  import Sections from './Sections.svelte';
-  import SectionSymbols from './SectionSymbols.svelte';
   import Button from './Button.svelte';
   import { trackLibByArtNr } from './config/trackLib';
   import ConnectionPane from './ConnectionPane.svelte';
+  import ControlGleis from './ControlGleis.svelte';
   import ControlMenuPanel from './ControlMenuPanel.svelte';
   import DimensionsControl from './DimensionsControl.svelte';
   import FlexGleisModeller from './FlexGleisModeller.svelte';
@@ -18,34 +17,44 @@
   import GridControl from './GridControl.svelte';
   import Guides from './Guides.svelte';
   import { connectFlexPointStart } from './helpers/flex';
+  import Icon from './Icon.svelte';
   import LayerControl from './LayerControl.svelte';
   import MeasureTool from './MeasureTool.svelte';
   import Plane from './Plane.svelte';
   import PlaneTools from './PlaneTools.svelte';
   import SavesControl from './SavesControl.svelte';
+  import Sections from './Sections.svelte';
+  import SectionSymbols from './SectionSymbols.svelte';
   import SelectionTools from './SelectionTools.svelte';
   import ShortCurcuitConnections from './ShortCurcuitConnections.svelte';
   import SideMenu from './SideMenu.svelte';
   import SlopeConfig from './SlopeConfig.svelte';
   import SlopeInfo from './SlopeInfo.svelte';
   import { isAppConfigReady } from './store/appConfig';
-  import { getAssignedSectionByGleisId } from './store/sections';
   import {
-    gleisBezetz,
     gleisIdsActive,
     gleisPlannedSelected,
     gleisPlannedSelectedByLayerId,
     gleisPlannedUnselectedByLayerId,
     isCutPathActive,
-    setGleisIdsActive,
     singleFlexActive,
   } from './store/gleis';
+  import {
+    assignBlock,
+    hasBlocksAssigned,
+    hasMultipleSectionsSelected,
+    hasSectionsAssigned,
+    isSectionsChain,
+    toggleSection,
+  } from './store/sections';
   import {
     activeGuide,
     fillDialogActive,
     guidesToolShapeType,
     isAnyToolEnabled,
+    operationsMode,
     slopesByLayerId,
+    toggleOperationsMode,
     toggleTool,
     tools,
     zoomzer,
@@ -62,149 +71,159 @@
       isLoading = false;
     });
   });
-
-  function selectRoute(id: string) {
-    // const route = $gleisBezetz.routes[id];
-    // if (route) {
-    //   const ids = route.route.links.map((x) => x[3].id);
-    //   setGleisIdsActive(ids);
-    // }
-    gleisBezetz.update((bezetz) => {
-      bezetz.activeRouteId = id;
-      return bezetz;
-    });
-  }
 </script>
 
-<main class="App" class:isLoading>
+<main
+  class="App"
+  class:isLoading
+  class:operation-mode-control={$operationsMode === 'control'}
+  class:operation-mode-build={$operationsMode === 'build'}
+>
   <header class="Header">
     <h1 class="Logo">Gleis planner</h1>
-    <TrackLibControl />
-    <div class="PanelGroup">
-      <GleisStats />
-      <GleisConfig />
+    <!-- svelte-ignore missing-declaration -->
 
-      <ControlMenuPanel title="Tools">
-        <Button
-          isActive={$tools.section.enabled}
-          disabled={!$gleisIdsActive.length}
-          on:click={() =>
-            toggleTool('section', {
-              action: 'addTo',
-              data: getAssignedSectionByGleisId($gleisIdsActive[0]),
-            })}
-        >
-          Add section
-        </Button>
-        <Button
-          isActive={$tools.measure.enabled}
-          on:click={() => toggleTool('measure')}
-        >
-          Measure line
-        </Button>
-        <Button
-          isActive={$tools.guides.enabled}
-          on:click={() => toggleTool('guides')}
-        >
-          Guides
-        </Button>
-        {#if $gleisPlannedSelected?.[0]?.type === 'Flex'}
+    {#if $operationsMode === 'control'}
+      <div class="PanelGroup">
+        <ControlMenuPanel title="Mode">
+          <Button on:click={() => toggleOperationsMode()}>Build</Button>
+        </ControlMenuPanel>
+        <BezetzController />
+      </div>
+    {/if}
+    {#if $operationsMode === 'build'}
+      <TrackLibControl />
+      <div class="PanelGroup">
+        <ControlMenuPanel title="Mode">
+          <Button on:click={() => toggleOperationsMode()}>Control</Button>
+        </ControlMenuPanel>
+        <GleisStats />
+        <GleisConfig />
+        <ControlMenuPanel title="Controls">
           <Button
-            isActive={$isCutPathActive}
-            on:click={() => isCutPathActive.update((isActive) => !isActive)}
+            isActive={$hasSectionsAssigned}
+            on:click={(event) => toggleSection($gleisIdsActive)}
           >
-            Cut path
+            Section
+            {#if $hasMultipleSectionsSelected}
+              <Icon size={12} name="exclamation-triangle" />
+            {/if}
           </Button>
-        {/if}
-        {#if $tools.guides.enabled}
-          {#each ['line', 'rect'] as type}
+          <Button
+            isActive={$hasBlocksAssigned}
+            disabled={!$isSectionsChain}
+            on:click={() => assignBlock()}
+          >
+            Block
+          </Button>
+        </ControlMenuPanel>
+        <ControlMenuPanel title="Tools">
+          <Button
+            isActive={$tools.measure.enabled}
+            on:click={() => toggleTool('measure')}
+          >
+            Measure line
+          </Button>
+          <Button
+            isActive={$tools.guides.enabled}
+            on:click={() => toggleTool('guides')}
+          >
+            Guides
+          </Button>
+          {#if $gleisPlannedSelected?.[0]?.type === 'Flex'}
             <Button
-              isActive={$guidesToolShapeType === type}
-              on:click={() => guidesToolShapeType.set(type)}
+              isActive={$isCutPathActive}
+              on:click={() => isCutPathActive.update((isActive) => !isActive)}
             >
-              {type}
+              Cut path
             </Button>
-          {/each}
+          {/if}
+          {#if $tools.guides.enabled}
+            {#each ['line', 'rect'] as type}
+              <Button
+                isActive={$guidesToolShapeType === type}
+                on:click={() => guidesToolShapeType.set(type)}
+              >
+                {type}
+              </Button>
+            {/each}
+            <Button
+              disabled={!$activeGuide}
+              on:click={() => fillDialogActive.set(true)}>Fill</Button
+            >
+          {/if}
           <Button
-            disabled={!$activeGuide}
-            on:click={() => fillDialogActive.set(true)}>Fill</Button
+            isActive={$tools.zoom.enabled}
+            on:click={() => toggleTool('zoom')}
           >
-        {/if}
-        <Button
-          isActive={$tools.zoom.enabled}
-          on:click={() => toggleTool('zoom')}
-        >
-          Zoom
-        </Button>
-        {#if $tools.zoom.enabled}
-          <Button on:click={() => $zoomzer.reset()}>Reset</Button>
-        {/if}
-        <Button
-          isActive={$tools.routeSimulation.enabled}
-          on:click={() => toggleTool('routeSimulation')}
-        >
-          Route simulation
-        </Button>
-        {#if $tools.routeSimulation.enabled}
-          <BezetzController />
-        {/if}
-        {#each Object.entries($gleisBezetz.routes) as [id], index}
-          <Button
-            isActive={id === $gleisBezetz.activeRouteId}
-            on:click={() => selectRoute(id)}>{index}</Button
-          >
-        {/each}
-      </ControlMenuPanel>
-    </div>
+            Zoom
+          </Button>
+          {#if $tools.zoom.enabled}
+            <Button on:click={() => $zoomzer.reset()}>Reset</Button>
+          {/if}
+        </ControlMenuPanel>
+      </div>
+    {/if}
   </header>
 
   <div class="PlaneContainer">
     <Plane>
-      {#each Object.entries($gleisPlannedUnselectedByLayerId) as [layerId, gleisPlanned] (layerId)}
-        {#each gleisPlanned as gleisProps (gleisProps.id)}
-          <Gleis {gleisProps} proto={tracksByArtNr[gleisProps.artnr]} />
-        {/each}
-        <GleisConnections {gleisPlanned} />
-      {/each}
-      {#if $gleisPlannedSelected.length}
-        <SelectionTools gleisSelected={gleisPlannedSelected}>
-          {#each $gleisPlannedSelected as gleisProps (gleisProps.id)}
-            {#if $singleFlexActive?.id !== gleisProps.id}
-              <Gleis {gleisProps} proto={tracksByArtNr[gleisProps.artnr]} />
-            {:else}
-              <FlexGleisModeller {gleisProps} />
-            {/if}
+      {#if $operationsMode === 'build'}
+        {#each Object.entries($gleisPlannedUnselectedByLayerId) as [layerId, gleisPlanned] (layerId)}
+          {#each gleisPlanned as gleisProps (gleisProps.id)}
+            <Gleis {gleisProps} proto={tracksByArtNr[gleisProps.artnr]} />
           {/each}
-        </SelectionTools>
-        {#each Object.entries($gleisPlannedSelectedByLayerId) as [layerId, gleisPlanned] (layerId)}
-          {#if $slopesByLayerId[layerId]}
-            {#each $slopesByLayerId[layerId] as slope}
-              {#if slope.gleisIds.some((id) => $gleisIdsActive.includes(id))}
-                <SlopeInfo {slope} />
+          <GleisConnections {gleisPlanned} />
+        {/each}
+        {#if $gleisPlannedSelected.length}
+          <SelectionTools gleisSelected={gleisPlannedSelected}>
+            {#each $gleisPlannedSelected as gleisProps (gleisProps.id)}
+              {#if $singleFlexActive?.id !== gleisProps.id}
+                <Gleis {gleisProps} proto={tracksByArtNr[gleisProps.artnr]} />
+              {:else}
+                <FlexGleisModeller {gleisProps} />
               {/if}
             {/each}
-          {/if}
-        {/each}
-        <GleisConnections
-          gleisPlanned={$gleisPlannedSelected}
-          selectionMode={isGleisModeActive}
-        />
+          </SelectionTools>
+          {#each Object.entries($gleisPlannedSelectedByLayerId) as [layerId, gleisPlanned] (layerId)}
+            {#if $slopesByLayerId[layerId]}
+              {#each $slopesByLayerId[layerId] as slope}
+                {#if slope.gleisIds.some((id) => $gleisIdsActive.includes(id))}
+                  <SlopeInfo {slope} />
+                {/if}
+              {/each}
+            {/if}
+          {/each}
+          <GleisConnections
+            gleisPlanned={$gleisPlannedSelected}
+            selectionMode={isGleisModeActive}
+          />
+        {/if}
       {/if}
-      <SectionSymbols />
-      {#if $tools.routeSimulation.enabled}
+      {#if $operationsMode === 'control'}
+        {#each Object.entries($gleisPlannedUnselectedByLayerId) as [layerId, gleisPlanned] (layerId)}
+          {#each gleisPlanned as gleisProps (gleisProps.id)}
+            <ControlGleis
+              {gleisProps}
+              proto={tracksByArtNr[gleisProps.artnr]}
+            />
+          {/each}
+        {/each}
         <BezetzGleis />
       {/if}
-
-      {#if $connectFlexPointStart}
-        <FlexGleisModeller />
-      {/if}
-      <ShortCurcuitConnections />
-      <Guides />
-      {#if $tools.measure.enabled}
-        <MeasureTool />
-      {/if}
-      {#if isGleisModeActive}
-        <PlaneTools />
+      <SectionSymbols />
+      {#if $operationsMode === 'build'}
+        {#if $connectFlexPointStart}
+          <FlexGleisModeller />
+        {/if}
+        <ShortCurcuitConnections />
+        <Guides />
+        {#if $tools.measure.enabled}
+          <MeasureTool />
+        {/if}
+        {#if isGleisModeActive}
+          <PlaneTools />
+        {/if}
       {/if}
     </Plane>
   </div>
