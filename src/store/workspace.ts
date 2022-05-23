@@ -1,7 +1,7 @@
 import { derived, get, writable } from 'svelte/store';
 import svgPanZoom from 'svg-pan-zoom';
 import { activeTrackLibId, setActiveTrackLibId } from '../config/trackLib';
-import { downloadJSON, generateID } from '../helpers/app';
+import { downloadJSON, generateID, jsonCopy } from '../helpers/app';
 import type {
   Dimensions,
   GleisPlanSaved,
@@ -123,6 +123,7 @@ export function importSavedConfig(
     appConfig.set(config.appConfig);
     guides.set(config.guides);
     sectionsDB.set(config.sections);
+    blocksDB.set(config.blocks);
     saveGleisPlan(config.id, config.name);
   }
 }
@@ -144,11 +145,13 @@ function createSavedConfig(id: string, name: string): SavedConfig {
 }
 
 export function createNewGleisPlan() {
-  layerControl.set(LAYERS_INITIAL_STATE);
+  layerControl.set(jsonCopy(LAYERS_INITIAL_STATE));
   gleisPlannedDB.set({});
-  appConfig.set(APP_CONFIG_DEFAULT);
+  appConfig.set(jsonCopy(APP_CONFIG_DEFAULT));
   guides.set([]);
   setGleisPlanSavedId('');
+  sectionsDB.set({});
+  blocksDB.set({});
 }
 
 export function saveGleisPlan(id: string | null, name?: string) {
@@ -403,68 +406,4 @@ export function toggleOperationsMode() {
   operationsMode.update((opMode) => {
     return opMode === 'build' ? 'control' : 'build';
   });
-}
-
-export interface Loco {
-  id: string;
-  title: string;
-  atPoint?: Point;
-  direction: SectionDirection;
-  velocity: number;
-}
-
-export interface Locos {
-  [id: string]: Loco;
-}
-
-export const locosDB = db<Locos>('locos', {
-  br218_0334: {
-    id: 'br218_0334',
-    title: 'BR218 -- 0334',
-    direction: SectionDirection.C1_C2,
-    velocity: 0,
-  },
-  br103_01: {
-    id: 'br103_01',
-    title: 'BR103 -- 01',
-    direction: SectionDirection.C1_C2,
-    velocity: 0,
-  },
-});
-
-export const activeLocoID = writable<string>('');
-
-export function updateLoco(locoID: string, updatePayload: Partial<Loco>) {
-  locosDB.update((locosDB) => {
-    const loco = locosDB[locoID];
-    if (updatePayload) {
-      locosDB[locoID] = {
-        ...loco,
-        ...updatePayload,
-        id: locoID,
-      };
-    }
-    return locosDB;
-  });
-}
-
-export function setBlockActiveByGleisId(gleisID: GleisPropsPlanned['id']) {
-  const blockIds = derived(
-    [sectionsDB, gleisPlannedDB],
-    ([sectionsDB, gleisPlannedDB]) => {
-      const sectionID = gleisPlannedDB[gleisID].sectionId;
-      const section = sectionsDB[sectionID];
-      const blockId = section.blockId;
-      const sectionIdsInBlock = Object.entries(sectionsDB)
-        .filter(([id, section]) => {
-          return section.blockId === blockId;
-        })
-        .map(([id]) => id);
-      const gleisIdsInBlock = Object.entries(gleisPlannedDB)
-        .filter(([id, gleis]) => {
-          return sectionIdsInBlock.includes(gleis.sectionId);
-        })
-        .map(([id]) => id);
-    }
-  );
 }

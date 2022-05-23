@@ -4,7 +4,7 @@ import {
   ROOT_POINT_ORIGIN_DIRECTION,
 } from '../config/constants';
 import { trackLib, trackLibByArtNr } from '../config/trackLib';
-import { generateID, jsonCopy, round } from '../helpers/app';
+import { generateID, round } from '../helpers/app';
 import {
   calculateCrossingPoints,
   generateCrossingPaths,
@@ -30,7 +30,6 @@ import {
   generateTurnoutCurvedPaths,
 } from '../helpers/turnoutCurved';
 import type {
-  Block,
   GleisPlanned,
   GleisPropsPlanned,
   PathSegmentProps,
@@ -44,7 +43,6 @@ import type {
 } from '../types';
 import { appConfigValue, db } from './appConfig';
 import { activeLayer, layerControl, layersById } from './layerControl';
-import type { Loco } from './workspace';
 
 export const protoGleisIdActive = appConfigValue<string>('protoGleisIdActive');
 
@@ -628,91 +626,6 @@ export function shortCircuitConnections() {
       return scc;
     }
   );
-}
-
-type PointString = string;
-type GleisConnectionType = string;
-
-export type GleisLink = [
-  /* FROM: */
-  PointString,
-  GleisPropsPlanned | null,
-  /* TO: */
-  PointString,
-  GleisPropsPlanned
-];
-
-export type LinkedRoute = GleisLink[];
-
-export interface Route {
-  id: string;
-  links: GleisLink[];
-  path: string;
-  length: number;
-}
-
-export interface BezetzRoute {
-  route: Route;
-  activeLinkIndex: number;
-  activePathSegments: string[];
-}
-
-export interface LocoRoutes {
-  routes: {
-    [routeId: string]: BezetzRoute;
-  };
-  activeRouteId: string;
-  departureBlockID: Block['id'];
-  destinationBlockID: Block['id'];
-}
-
-export interface BezetzRoutes {
-  [locoID: string]: LocoRoutes;
-}
-
-export function setActiveRouteId(locoID: string, routeID: string) {
-  gleisBezetz.update((gleisBezetz) => {
-    gleisBezetz[locoID].routes[routeID].activeLinkIndex = 0;
-    gleisBezetz[locoID].routes[routeID].activePathSegments = [];
-    gleisBezetz[locoID].activeRouteId = routeID;
-    return gleisBezetz;
-  });
-}
-
-export const GLEIS_LOCO_ROUTES_DEFAULT: LocoRoutes = {
-  routes: {},
-  activeRouteId: '',
-  departureBlockID: '',
-  destinationBlockID: '',
-};
-
-// TODO: Make this filling dynamic
-export const GLEIS_BEZETZ_DEFAULT: BezetzRoutes = {
-  br218_0334: jsonCopy(GLEIS_LOCO_ROUTES_DEFAULT),
-  br103_01: jsonCopy(GLEIS_LOCO_ROUTES_DEFAULT),
-};
-
-export const gleisBezetz = db<BezetzRoutes>(
-  'gleisBezetz',
-  jsonCopy(GLEIS_BEZETZ_DEFAULT)
-);
-
-export const activeRouteSegments = derived(gleisBezetz, (gleisBezetz) => {
-  return Object.entries(gleisBezetz).flatMap(([locoID, gleisBezetz]) => {
-    const activeRoute: BezetzRoute =
-      gleisBezetz?.routes?.[gleisBezetz?.activeRouteId];
-    return activeRoute?.activePathSegments || [];
-  });
-});
-
-export function getLocoRoutes(locoID: Loco['id']): LocoRoutes {
-  return get(gleisBezetz)?.[locoID];
-}
-
-export function getActiveRoute(locoID: Loco['id']) {
-  const locoRoutes = getLocoRoutes(locoID);
-  const bezetzRoute = locoRoutes?.routes[locoRoutes?.activeRouteId];
-  return bezetzRoute || null;
 }
 
 // window.removeLastGleis = () => {

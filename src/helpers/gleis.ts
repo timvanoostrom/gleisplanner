@@ -51,13 +51,15 @@ export function findSegment(
           !!pathSegment.points?.length
       )
       ?.find((pathSegment) => {
+        const isStartOfRoute =
+          !fromPoint && pathSegment.points.includes(toPoint);
         const isEndOfRoute = !toPoint && pathSegment.points.includes(fromPoint);
 
         const isConnectingSegment =
           pathSegment.points.includes(fromPoint) &&
           pathSegment.points.includes(toPoint);
 
-        return isConnectingSegment || isEndOfRoute;
+        return isConnectingSegment || isEndOfRoute || isStartOfRoute;
       })
       ?.d.toString() || '';
 

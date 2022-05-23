@@ -1,15 +1,18 @@
 <script lang="ts">
+  import { controlGleisIdsActive } from './store/gleis';
   import {
-    controlGleisIdsActive,
-    setControlGleisIdsActive,
+    previewControlRoute,
     activeRouteSegments,
-  } from './store/gleis';
-  import { previewControlRoute } from './store/sections';
+    locoStackByGleisId,
+    activeLinkRegistry,
+  } from './store/sections';
 
   import type { GleisPropsPlanned, ProtoGleis } from './types';
 
   export let gleisProps: GleisPropsPlanned;
   export let proto: ProtoGleis;
+
+  $: centerPoint = gleisProps.points.find((p) => p.type === 'lbl');
 </script>
 
 <g
@@ -22,13 +25,36 @@
   on:click={(event) => {}}
 >
   <title>{proto.title} - {proto.artnr}</title>
+  {#if $locoStackByGleisId[gleisProps.id] && centerPoint}
+    <g class="LocoStack">
+      <line
+        x1={centerPoint.x}
+        y1={centerPoint.y}
+        x2={centerPoint.x}
+        y2={centerPoint.y + 37}
+        class="LocoStack-tether"
+      />
+      {#each $locoStackByGleisId[gleisProps.id] as locoID, index}
+        <text
+          class:is-current={$activeLinkRegistry?.[locoID]?.currentID ===
+            gleisProps.id}
+          class:is-next={$activeLinkRegistry?.[locoID]?.nextID ===
+            gleisProps.id}
+          x={centerPoint.x}
+          y={60 + centerPoint.y + 30 * index}
+        >
+          {locoID}
+        </text>
+      {/each}
+    </g>
+  {/if}
   {#if gleisProps.pathSegments}
     {#each gleisProps.pathSegments as pathSegment, index (pathSegment)}
       <path
         d={pathSegment.d.toString()}
         class={`basepath`}
         on:click={() => {
-          setControlGleisIdsActive([gleisProps.id]);
+          // setControlGleisIdsActive([gleisProps.id]);
         }}
       />
       <path
@@ -77,5 +103,19 @@
   }
   .isActive .main {
     stroke: red;
+  }
+  .LocoStack text {
+    font-size: 26px;
+    text-anchor: middle;
+  }
+  .LocoStack-tether {
+    stroke: black;
+  }
+  .is-next {
+    fill: orange;
+  }
+  .is-current {
+    fill: green;
+    font-weight: bold;
   }
 </style>

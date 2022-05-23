@@ -8,31 +8,33 @@
   import { isWithinRadius } from './helpers/geometry';
   import { findSegment } from './helpers/gleis';
   import {
-    getActiveRoute,
     getCoordString,
-    gleisBezetz,
-    GleisLink,
     gleisPlanned,
-    GLEIS_LOCO_ROUTES_DEFAULT,
-    LinkedRoute,
     pointConnections,
-    Route,
-    setActiveRouteId,
     setControlGleisIdsActive,
     setControlGleisIdsActive_,
   } from './store/gleis';
   import {
     blocksBySectionId,
     blocksDB,
+    clearRouteDestination,
+    getActiveRoute,
+    getBezetzSegment,
+    gleisBezetz,
     gleisByBlockId,
+    GleisLink,
+    GLEIS_LOCO_ROUTES_DEFAULT,
+    LinkedRoute,
+    Loco,
+    locosDB,
+    previewControlRoute,
     resetRoutes,
+    Route,
+    setActiveRouteId,
+    setLocoAtPoint,
     startLoco,
     stopLoco,
-    setLocoAtPoint,
-    getBezetzSegment,
-    previewControlRoute,
   } from './store/sections';
-  import { Loco, locosDB } from './store/workspace';
   import type { GleisPropsPlanned, PathSegmentProps, Point } from './types';
 
   function findPointByCoordString(points: Point[], str: string) {
@@ -106,6 +108,7 @@
     if (!opposingPointStrings.length) {
       return [];
     }
+
     // Select all connected gleis
     const connectedGleis = opposingPointStrings.map((toPoint) => {
       // NOTE: Takes first found gleis but when we have multiple gleis in various layers
@@ -120,7 +123,7 @@
 
     if (!connectedGleis.length) {
       // dead end friends??
-      console.log('dead endZZ at', currentGleis); //gpWrTYdIpKAP5zx9y_aZlwQ
+      console.log('dead endZZ at', currentGleis);
       return [];
     }
 
@@ -133,8 +136,6 @@
           }
 
           const blockId = $blocksBySectionId?.[toGleis.sectionId]?.id;
-          // console.log('has section id!', blockId);
-
           return hasSectionId && blockId === destinationBlockID;
         }
       : ([fromPoint, fromGleis, toPoint, toGleis]) => {
@@ -160,19 +161,28 @@
       }
     );
 
-    // console.log('connectionCandidates', connectionCandidates);
-    // return;
-
     for (const candidateGleisLink of blockCandidates) {
       // TODO: Push all gleisID's in this section (via getAllGleisIdsInSection(candidate.blockId))
-      routes.push([...routeGleisGleisLinks, candidateGleisLink]);
+      const [, , fromPoint, fromGleis] = candidateGleisLink;
+
+      // Select opposite point of destination gleis
+      const toPoint = fromGleis.pathSegments
+        .find((p) => p.type === 'branch' || p.type === 'main')
+        ?.points?.find((p) => p !== fromPoint);
+
+      const candidateGleisEndpoint: GleisLink = [
+        fromPoint,
+        fromGleis,
+        toPoint,
+        null,
+      ];
+
+      routes.push([
+        ...routeGleisGleisLinks,
+        candidateGleisLink,
+        candidateGleisEndpoint,
+      ]);
     }
-
-    // console.log('blockCandidates', blockCandidates);
-
-    // if (blockCandidates.length + connectionCandidates.length >= 1) {
-
-    // }
 
     for (const [
       fromPoint,
@@ -180,19 +190,13 @@
       toPoint,
       toGleis,
     ] of connectionCandidates) {
-      let nP = [...pointsCovered];
+      let pointsCoveredCopy = [...pointsCovered];
       if (!pointsCovered.includes(fromPoint + toPoint)) {
-        nP.push(fromPoint + toPoint);
+        pointsCoveredCopy.push(fromPoint + toPoint);
       } else {
         continue;
       }
 
-      // setControlGleisIdsActive((ids) => [toGleis.id]);
-      // await new Promise((resolve) => {
-      //   setTimeout(() => {
-      //     resolve();
-      //   }, 200);
-      // });
       findRoutesToAvailableSection(
         toGleis.id,
         toPoint,
@@ -200,12 +204,9 @@
         routes,
         depth + 1,
         destinationBlockID,
-        nP
+        pointsCoveredCopy
       );
-      // break;
     }
-
-    // console.log('r:', routes);
 
     return routes;
   }
@@ -241,7 +242,15 @@
     return routes;
   }
 
-  function combineLinksToPath(gleisLinks: GleisLink[]) {
+  function determineEndAtPoint(loco: Loco, segment: string) {
+    const path = new svgPathProperties(segment);
+    const pathLength = path.getTotalLength();
+    const locoLength = loco.length ?? 0;
+    const margin = (pathLength - locoLength) / 2;
+    return path.getPointAtLength(pathLength - margin);
+  }
+
+  function getPathLinks(gleisLinks: GleisLink[]) {
     let path = '';
     let length = 0;
 
@@ -276,7 +285,7 @@
       path += segment;
     }
 
-    return { path, length };
+    return { path, length, segments: linkedList };
   }
 
   let unsubscribe;
@@ -295,8 +304,6 @@
     const pathProps = new svgPathProperties(blockPath);
     const atPoint = pathProps.getPointAtLength(pathProps.getTotalLength() / 2);
 
-    console.log('blockPath:', blockPath, atPoint);
-
     return atPoint;
   }
 
@@ -314,7 +321,6 @@
       (pointString, index) => index === 0,
       destinationBlockID
     );
-    console.log('\t p1', departureGleisID, routes1);
 
     const routes2 = findRoutes(
       departureGleisID,
@@ -322,44 +328,36 @@
       destinationBlockID
     );
 
-    console.log('\t p2', departureGleisID, routes2);
-
     const routes: LinkedRoute[] = [...routes1, ...routes2];
-
-    const routesUnique = Array.from(
-      new Set(routes.map((r) => r.map(([a, b, c, to]) => c).sort()))
-    );
-
-    console.log(
-      'routesUnique',
-      routesUnique,
-      routesUnique.length,
-      routes.length
-    );
 
     if (!routes.length) {
       alert('Cannot generate route, no route to destination section found.');
     } else {
       const routesGenerated = {};
-      for (const routeLinks of routes) {
-        // routeLinks.shift();
 
-        const pathCombined = combineLinksToPath(routeLinks);
+      for (const routeLinks of routes) {
+        const pathLinks = getPathLinks(routeLinks);
+
         const route: Route = {
           id: generateID(),
           links: routeLinks,
-          path: pathCombined?.path,
-          length: pathCombined?.length,
+          path: pathLinks?.path,
+          length: pathLinks?.length,
         };
+
+        const lastSegment =
+          pathLinks.segments[pathLinks.segments.length - 1][2];
 
         routesGenerated[route.id] = {
           route,
           activeLinkIndex: 0,
           activePathSegments: [],
+
+          // TODO: endAtPoint could be determined by a signal or generated based on train length / type / user input etc.
+          endAtPoint: determineEndAtPoint(loco, lastSegment),
         };
       }
 
-      // Remove starting link so route will activate next link first
       gleisBezetz.update((bezetzUpdated) => {
         const l = bezetzUpdated[loco.id] || jsonCopy(GLEIS_LOCO_ROUTES_DEFAULT);
         return {
@@ -367,10 +365,15 @@
           [loco.id]: {
             ...l,
             routes: routesGenerated,
+            activeRouteId: Object.keys(routesGenerated)[0] ?? '',
           },
         };
       });
     }
+  }
+
+  function resetPreview() {
+    previewControlRoute.set([]);
   }
 
   function previewRoute(locoID: string, routeID: string) {
@@ -386,6 +389,67 @@
     previewControlRoute.set(segments);
     // setControlGleisIdsActive(ids);
   }
+
+  function setLocoPoint(locoID: string) {
+    const point =
+      $gleisBezetz[locoID].departureBlockID === null
+        ? null
+        : getPointAtDepartureBlock($gleisBezetz[locoID].departureBlockID);
+    console.log('Set-loco-at-point', locoID, point);
+    return setLocoAtPoint(locoID, point);
+  }
+
+  function stopAll() {
+    Object.entries($gleisBezetz).forEach(([locoID]) => {
+      stopLoco(locoID);
+    });
+  }
+
+  function startAll() {
+    Object.entries($gleisBezetz)
+      .filter(([locoID, { activeRouteId }]) => !!activeRouteId)
+      .forEach(([locoID]) => {
+        startLoco(locoID);
+      });
+  }
+
+  function resetAll() {
+    resetPreview();
+
+    Object.entries($gleisBezetz).forEach(([locoID]) => {
+      stopLoco(locoID);
+      resetRoutes(locoID);
+      setLocoAtPoint(locoID);
+    });
+  }
+
+  function runSimulation() {
+    const blockIDs = Object.keys($blocksDB);
+
+    gleisBezetz.update((gleisBezetz) => {
+      for (const [locoID, loco] of Object.entries($locosDB)) {
+        gleisBezetz[locoID].departureBlockID = blockIDs.pop();
+      }
+      blockIDs.pop();
+      for (const [locoID, loco] of Object.entries($locosDB)) {
+        gleisBezetz[locoID].destinationBlockID = blockIDs.pop();
+      }
+      return gleisBezetz;
+    });
+
+    for (const [locoID, loco] of Object.entries($locosDB)) {
+      setLocoPoint(locoID);
+      generateRoutes(
+        loco,
+        $gleisBezetz[locoID].departureBlockID,
+        $gleisBezetz[locoID].destinationBlockID
+      );
+    }
+  }
+
+  $: someStarted = Object.entries($gleisBezetz).some(
+    ([locoID]) => $locosDB[locoID].velocity !== 0
+  );
 
   onDestroy(() => {
     unsubscribe?.();
@@ -407,6 +471,7 @@
       <thead>
         <tr>
           <th>Loco</th>
+          <th>Speed</th>
           <th>Depart from</th>
           <th>Destination</th>
         </tr>
@@ -414,7 +479,10 @@
       <tbody>
         {#each Object.entries($locosDB) as [locoID, loco]}
           <tr>
-            <td class="loco-cell">{loco.title}</td>
+            <td class="loco-cell" style={`color: ${loco.color}`}>
+              {loco.title}
+            </td>
+            <td>{loco.velocity}</td>
             <td class="loco-assign">
               {#if !!$gleisBezetz[locoID]}
                 <label>
@@ -423,15 +491,8 @@
                     disabled={$locosDB[locoID].velocity !== 0}
                     bind:value={$gleisBezetz[locoID].departureBlockID}
                     on:change={() => {
-                      setLocoAtPoint(
-                        locoID,
-                        $gleisBezetz[locoID].departureBlockID === null
-                          ? null
-                          : getPointAtDepartureBlock(
-                              $gleisBezetz[locoID].departureBlockID
-                            )
-                      );
-                      resetRoutes(locoID);
+                      setLocoPoint(locoID);
+                      clearRouteDestination(locoID);
                     }}
                   >
                     <optgroup label="Schattenbahnhof 1">
@@ -450,9 +511,21 @@
                   <span>Destination</span>
                   <select
                     disabled={$locosDB[locoID].velocity !== 0 ||
-                      $gleisBezetz[locoID].departureBlockID === null}
+                      !$gleisBezetz[locoID].departureBlockID}
                     bind:value={$gleisBezetz[locoID].destinationBlockID}
-                    on:change={() => resetRoutes(locoID)}
+                    on:change={() => {
+                      if (
+                        $gleisBezetz[locoID].departureBlockID &&
+                        $gleisBezetz[locoID].destinationBlockID
+                      ) {
+                        setLocoPoint(locoID);
+                        generateRoutes(
+                          loco,
+                          $gleisBezetz[locoID].departureBlockID,
+                          $gleisBezetz[locoID].destinationBlockID
+                        );
+                      }
+                    }}
                   >
                     <optgroup label="Schattenbahnhof 1">
                       {#each Object.entries($blocksDB) as [id, block]}
@@ -463,7 +536,7 @@
                 </label>
               {/if}
             </td>
-            <td>
+            <!-- <td>
               <Button
                 disabled={!$gleisBezetz[locoID]?.departureBlockID ||
                   !$gleisBezetz[locoID]?.destinationBlockID ||
@@ -482,7 +555,7 @@
               >
                 Generate routes
               </Button>
-            </td>
+            </td> -->
             {#if !!$gleisBezetz[locoID]?.routes}
               <td>
                 <div class="route-variations">
@@ -492,8 +565,11 @@
                       const id = $gleisBezetz[locoID].activeRouteId;
                       setActiveRouteId(locoID, id);
                       previewRoute(locoID, id);
+                      setLocoPoint(locoID);
                     }}
-                    disabled={$locosDB[locoID].velocity !== 0}
+                    disabled={$locosDB[locoID].velocity !== 0 ||
+                      !$gleisBezetz[locoID].departureBlockID ||
+                      !$gleisBezetz[locoID].destinationBlockID}
                   >
                     {#each Object.entries($gleisBezetz[locoID].routes) as [id], index (id)}
                       <option
@@ -509,16 +585,32 @@
               <td class="start-stop-cell">
                 <Button
                   disabled={!$gleisBezetz[locoID]?.activeRouteId}
-                  on:click={() =>
-                    loco.velocity !== 0 ? stopLoco(locoID) : startLoco(locoID)}
-                  >{loco.velocity !== 0 ? 'Stop' : 'Start'}</Button
+                  on:click={() => {
+                    resetPreview();
+                    (loco.velocity !== 0 ? stopLoco : startLoco)(locoID);
+                  }}>{loco.velocity !== 0 ? 'Stop' : 'Start'}</Button
                 >
+              </td>
+              <td>
+                <Button
+                  on:click={() => resetRoutes(locoID)}
+                  disabled={!$gleisBezetz[locoID]?.activeRouteId}
+                >
+                  Cancel
+                </Button>
               </td>
             {/if}
           </tr>
         {/each}
       </tbody>
     </table>
+    <div class="TableFooter">
+      <Button on:click={() => resetAll()}>Reset all</Button>
+      <Button on:click={() => (someStarted ? stopAll() : startAll())}>
+        {someStarted ? 'Stop all' : 'Start all'}
+      </Button>
+      <Button on:click={() => runSimulation()}>Run simulation</Button>
+    </div>
   </div>
 </ControlMenuPanel>
 
@@ -540,5 +632,12 @@
   .route-variations {
     max-width: 100px;
     overflow-x: auto;
+  }
+  .TableFooter {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px solid #ccc;
   }
 </style>
