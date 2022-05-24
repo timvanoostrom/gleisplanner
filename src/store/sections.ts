@@ -1,78 +1,34 @@
 import { derived, get, writable } from 'svelte/store';
 import { svgPathProperties } from 'svg-path-properties';
-import { generateID, jsonCopy } from '../helpers/app';
+import { generateID } from '../helpers/app';
 import { calculateTrackLengthCM } from '../helpers/geometry';
 import { findSegment } from '../helpers/gleis';
 import type {
+  ActiveLinkRegistry,
   Block,
   Blocks,
   GleisPropsPlanned,
+  LinkedRoute,
   Point,
   Section,
   Sections,
 } from '../types';
-import { SectionDirection } from '../types';
 import { db } from './appConfig';
 import {
   gleisPlanned,
   gleisPlannedAll,
   gleisPlannedDB,
   gleisPlannedSelected,
-  pointConnections,
   updateGleis,
 } from './gleis';
 import { layersById } from './layerControl';
+import { stopLoco } from './loco';
+import { planeSvg } from './plane';
+import { gleisBezetz } from './bezetz';
 
 export const blocksDB = db<Blocks>('blocks', {});
 export const sectionsDB = db<Sections>('sections', {});
-
 export const sectionIdsSelected = writable([]);
-
-export const isSectionsChain = derived(
-  [gleisPlannedDB, sectionIdsSelected, pointConnections],
-  ([gleisPlanned, sectionIdsSelected, pointConnections]) => {
-    if (sectionIdsSelected.length >= 1) {
-      const gleisInSection = Object.entries(gleisPlanned).filter(([, gleis]) =>
-        sectionIdsSelected.includes(gleis?.sectionId)
-      );
-
-      const pointIndex = [];
-      for (const [, gleis] of gleisInSection) {
-        const pathSegmentPoints = gleis.pathSegments
-          .filter((segment) => segment.type === 'main')
-          .flatMap((segment) => segment.points);
-        pointIndex.push(Array.from(new Set(pathSegmentPoints)));
-      }
-
-      console.log('pointIndex:', pointIndex);
-      const allFlat = pointIndex.flatMap((p) => p);
-      const isOk = pointIndex.every((points) => {
-        const blap = 'bliep';
-      });
-      // let i = 0;
-      // for (const segmentPoints of pointIndex) {
-      //   switch (segmentPoints.length) {
-      //     case 2:
-      //       // Flex, straight, curve
-      //       break;
-      //     case 3:
-      //       // Turnout
-      //       break;
-      //     case 4:
-      //       // Crossing or Threeway
-      //       // TODO: implement
-      //       break;
-      //   }
-      //   i += 1;
-      // }
-
-      const gleisChained = gleisInSection;
-
-      return gleisChained.length === gleisInSection.length;
-    }
-    return false;
-  }
-);
 
 export const hasMultipleSectionsSelected = derived(
   gleisPlannedSelected,
@@ -443,35 +399,6 @@ export function assignBlock() {
   // });
 }
 
-export function stopLoco(locoID: Loco['id'], isWaiting: boolean = false) {
-  updateLoco(locoID, { velocity: 0, isWaiting });
-}
-
-export function startLoco(locoID: string) {
-  updateLoco(locoID, { velocity: 1, isWaiting: false });
-}
-
-export function resetRoutes(locoID: string) {
-  gleisBezetz.update((gleisBezetz) => {
-    gleisBezetz[locoID] = jsonCopy(GLEIS_LOCO_ROUTES_DEFAULT);
-    return gleisBezetz;
-  });
-}
-
-export function clearRouteDestination(locoID: string) {
-  gleisBezetz.update((gleisBezetz) => {
-    gleisBezetz[locoID].destinationBlockID = '';
-    gleisBezetz[locoID].activeRouteId = '';
-    gleisBezetz[locoID].routes = {};
-    return gleisBezetz;
-  });
-}
-
-export function setLocoAtPoint(locoID: string, point: Point | null = null) {
-  // console.log('set at!', point);
-  updateLoco(locoID, { atPoint: point });
-}
-
 export function getBezetzSegment(
   currentLinkIndex: number,
   linkedRoute: LinkedRoute
@@ -488,176 +415,6 @@ export function getBezetzSegment(
   return '';
 }
 
-export const previewControlRoute = writable<string[]>([]);
-
-type PointString = string;
-type GleisConnectionType = string;
-
-export type GleisLink = [
-  /* FROM: */
-  PointString,
-  GleisPropsPlanned | null,
-  /* TO: */
-  PointString,
-  GleisPropsPlanned
-];
-
-export type LinkedRoute = GleisLink[];
-
-export interface Route {
-  id: string;
-  links: GleisLink[];
-  path: string;
-  length: number;
-}
-
-export interface BezetzRoute {
-  route: Route;
-  activeLinkIndex: number;
-  activePathSegments: string[];
-  endAtPoint: Point | null;
-}
-
-export interface LocoRoutes {
-  routes: {
-    [routeId: string]: BezetzRoute;
-  };
-  activeRouteId: string;
-  departureBlockID: Block['id'];
-  destinationBlockID: Block['id'];
-}
-
-export interface BezetzRoutes {
-  [locoID: string]: LocoRoutes;
-}
-
-export function setActiveRouteId(locoID: string, routeID: string) {
-  gleisBezetz.update((gleisBezetz) => {
-    gleisBezetz[locoID].routes[routeID].activeLinkIndex = 0;
-    gleisBezetz[locoID].routes[routeID].activePathSegments = [];
-    gleisBezetz[locoID].activeRouteId = routeID;
-    return gleisBezetz;
-  });
-}
-
-export const GLEIS_LOCO_ROUTES_DEFAULT: LocoRoutes = {
-  routes: {},
-  activeRouteId: '',
-  departureBlockID: '',
-  destinationBlockID: '',
-};
-
-// TODO: Make this filling dynamic
-export const GLEIS_BEZETZ_DEFAULT: BezetzRoutes = {
-  br218_0334: jsonCopy(GLEIS_LOCO_ROUTES_DEFAULT),
-  br103_01: jsonCopy(GLEIS_LOCO_ROUTES_DEFAULT),
-};
-
-export const gleisBezetz = db<BezetzRoutes>(
-  'gleisBezetz',
-  jsonCopy(GLEIS_BEZETZ_DEFAULT)
-);
-
-export const activeRouteSegments = derived(gleisBezetz, (gleisBezetz) => {
-  return Object.entries(gleisBezetz).flatMap(([locoID, gleisBezetz]) => {
-    const activeRoute: BezetzRoute =
-      gleisBezetz?.routes?.[gleisBezetz?.activeRouteId];
-    return activeRoute?.activePathSegments ?? [];
-  });
-});
-
-export function getLocoRoutes(locoID: Loco['id']): LocoRoutes {
-  return get(gleisBezetz)?.[locoID];
-}
-
-export function getActiveRoute(locoID: Loco['id']) {
-  const locoRoutes = getLocoRoutes(locoID);
-  const bezetzRoute = locoRoutes?.routes[locoRoutes?.activeRouteId];
-  return bezetzRoute ?? null;
-}
-
-export function getCurrentGleisId(locoID: Loco['id']) {
-  const activeRoute = getActiveRoute(locoID);
-
-  if (!activeRoute) {
-    return null;
-  }
-
-  const activeLink = activeRoute.route.links[activeRoute.activeLinkIndex];
-  const currentID = activeLink?.[3]?.id ?? null;
-
-  return currentID;
-}
-
-export function getNextGleisId(locoID: Loco['id']) {
-  const activeRoute = getActiveRoute(locoID);
-
-  if (!activeRoute) {
-    return null;
-  }
-
-  const nextActiveLink =
-    activeRoute.route.links[activeRoute.activeLinkIndex + 1];
-  const nextID = nextActiveLink?.[3]?.id ?? null;
-
-  return nextID;
-}
-
-export interface Loco {
-  id: string;
-  title: string;
-  atPoint?: Point;
-  direction: SectionDirection;
-  velocity: number;
-  color: string;
-  length?: number;
-  isWaiting?: boolean;
-}
-
-export interface Locos {
-  [id: string]: Loco;
-}
-
-export const LOCO_STOCK_DEFAULT: Locos = {
-  br218_0334: {
-    id: 'br218_0334',
-    title: 'BR218 -- 0334',
-    direction: SectionDirection.C1_C2,
-    velocity: 0,
-    color: 'red',
-  },
-  br103_01: {
-    id: 'br103_01',
-    title: 'BR103 -- 01',
-    direction: SectionDirection.C1_C2,
-    velocity: 0,
-    color: 'blue',
-  },
-};
-
-export const locosDB = db<Locos>('locos', LOCO_STOCK_DEFAULT);
-
-export const activeLocoID = writable<string>('');
-
-export function updateLoco(locoID: string, updatePayload: Partial<Loco>) {
-  locosDB.update((locosDB) => {
-    const loco = locosDB[locoID];
-    if (updatePayload) {
-      locosDB[locoID] = {
-        ...loco,
-        ...updatePayload,
-        id: locoID,
-      };
-    }
-    return locosDB;
-  });
-}
-
-type ActiveLinkRegistry = Record<
-  Loco['id'],
-  { nextID: GleisPropsPlanned['id']; currentID: GleisPropsPlanned['id'] }
->;
-
 export const activeLinkRegistry = derived([gleisBezetz], ([gleisBezetz]) => {
   const activeGleisLinkIds: ActiveLinkRegistry = {};
 
@@ -671,8 +428,8 @@ export const activeLinkRegistry = derived([gleisBezetz], ([gleisBezetz]) => {
       const nextActiveLink =
         activeBezetzRoute.route.links[activeBezetzRoute.activeLinkIndex + 1];
 
-      const currentID = activeLink?.[3]?.id || null;
-      const nextID = nextActiveLink?.[3]?.id || null;
+      const currentID = activeLink?.[3]?.id ?? null;
+      const nextID = nextActiveLink?.[3]?.id ?? null;
 
       if (!currentID) {
         return activeGleisLinkIds;
@@ -685,67 +442,97 @@ export const activeLinkRegistry = derived([gleisBezetz], ([gleisBezetz]) => {
   return activeGleisLinkIds;
 });
 
-export const locoStackByGleisId = derived(
-  [gleisBezetz, locosDB],
-  ([gleisBezetz, locos]) => {
-    const locoStackByGleisId = {};
-    // TODO: Sorted by departure time and speed + possible delays
-    const selectedRoutes = Object.entries(gleisBezetz);
+export function isPointDetected(pathSegment: string, point: Point) {
+  const svgPoint = get(planeSvg).createSVGPoint();
+  const path = document.querySelector(`path[d="${pathSegment}"]`);
 
-    for (const [locoID, locoRoutes] of selectedRoutes) {
-      const activeBezetzRoute = locoRoutes?.routes[locoRoutes?.activeRouteId];
-
-      if (!!activeBezetzRoute) {
-        for (const link of activeBezetzRoute.route.links) {
-          if (link[3]) {
-            const [, , , { id }] = link;
-            if (!locoStackByGleisId[id]) {
-              locoStackByGleisId[id] = [];
-            }
-            locoStackByGleisId[id].push(locoID);
-          }
-        }
-      }
-    }
-    return locoStackByGleisId;
+  if (!path) {
+    return false;
   }
-);
 
-window.cleanSections = () => {
-  const sections = get(sectionsDB);
+  svgPoint.x = point.x;
+  svgPoint.y = point.y;
 
-  let sectionIdsAssigned = [];
+  return (path as SVGPathElement).isPointInStroke(svgPoint);
+}
 
-  gleisPlannedDB.update((gleisPlanned) => {
-    for (const [id, gleis] of Object.entries(gleisPlanned)) {
-      if (gleis.sectionId && !sections[gleis.sectionId]) {
-        delete gleis.sectionId;
-      } else {
-        sectionIdsAssigned.push(gleis.sectionId);
-      }
-    }
-    return gleisPlanned;
+export function detectGleis(locoID: string, point: Point) {
+  const locoRoutes = get(gleisBezetz)[locoID];
+  const activeRoute = locoRoutes.routes[locoRoutes.activeRouteId];
+
+  // TODO: Escape scenario?
+  if (!activeRoute) {
+    stopLoco(locoID);
+    return;
+  }
+
+  const { route, activeLinkIndex = 0 } = activeRoute;
+  const nextActiveLinkIndex = activeLinkIndex + 1;
+  const pathSegment = getBezetzSegment(activeLinkIndex, route.links);
+
+  if (!pathSegment) {
+    console.log('path not detected. End of route???');
+    return;
+  }
+
+  // Geeft de loco nog steeds een positie door behorend bij de actieve rail sectie?
+  const isDetected1 = isPointDetected(pathSegment, point);
+  // De volgende railsectie
+  const pathSegment2 = getBezetzSegment(nextActiveLinkIndex, route.links);
+  // 2 bezette railsecties
+  const pathSegments = [pathSegment];
+
+  if (pathSegment2) {
+    pathSegments.push(pathSegment2);
+  }
+
+  // Als de loco niet gedetecteerd is, reserveren we nog niet een volgende sectie
+  const activeLinkIndexUpdated = !isDetected1
+    ? nextActiveLinkIndex
+    : activeLinkIndex;
+
+  gleisBezetz.update((bezetz) => {
+    bezetz[locoID].routes[route.id].activeLinkIndex = activeLinkIndexUpdated;
+    bezetz[locoID].routes[route.id].activePathSegments = pathSegments;
+    return bezetz;
   });
+}
 
-  const blockIdsFoundAtSections = [];
+// window.cleanSections = () => {
+//   const sections = get(sectionsDB);
 
-  sectionsDB.update((sectionsDB) => {
-    for (const [id, section] of Object.entries(sectionsDB)) {
-      if (!sectionIdsAssigned.includes(id)) {
-        delete sectionsDB[id];
-      } else if (section.blockId) {
-        blockIdsFoundAtSections.push(section.blockId);
-      }
-    }
-    return sectionsDB;
-  });
+//   let sectionIdsAssigned = [];
 
-  blocksDB.update((blocksDB) => {
-    for (const [id, block] of Object.entries(blocksDB)) {
-      if (!blockIdsFoundAtSections.includes(id)) {
-        delete blocksDB[id];
-      }
-    }
-    return blocksDB;
-  });
-};
+//   gleisPlannedDB.update((gleisPlanned) => {
+//     for (const [id, gleis] of Object.entries(gleisPlanned)) {
+//       if (gleis.sectionId && !sections[gleis.sectionId]) {
+//         delete gleis.sectionId;
+//       } else {
+//         sectionIdsAssigned.push(gleis.sectionId);
+//       }
+//     }
+//     return gleisPlanned;
+//   });
+
+//   const blockIdsFoundAtSections = [];
+
+//   sectionsDB.update((sectionsDB) => {
+//     for (const [id, section] of Object.entries(sectionsDB)) {
+//       if (!sectionIdsAssigned.includes(id)) {
+//         delete sectionsDB[id];
+//       } else if (section.blockId) {
+//         blockIdsFoundAtSections.push(section.blockId);
+//       }
+//     }
+//     return sectionsDB;
+//   });
+
+//   blocksDB.update((blocksDB) => {
+//     for (const [id, block] of Object.entries(blocksDB)) {
+//       if (!blockIdsFoundAtSections.includes(id)) {
+//         delete blocksDB[id];
+//       }
+//     }
+//     return blocksDB;
+//   });
+// };

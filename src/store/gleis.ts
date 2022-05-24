@@ -636,84 +636,84 @@ export function shortCircuitConnections() {
 //   gleisPlannedDB.set(Object.fromEntries(entries));
 // };
 
-window.assignPathPoints = function assignPathPoints() {
-  updateGleisPlanned((gleisPlanned) => {
-    Object.entries(gleisPlanned).forEach(([id, gleis]) => {
-      let prevSegment;
-      gleis.pathSegments = gleis.pathSegments.map((path, index) => {
-        if (path.type !== 'main') {
-          return path;
-        }
+// window.assignPathPoints = function assignPathPoints() {
+//   updateGleisPlanned((gleisPlanned) => {
+//     Object.entries(gleisPlanned).forEach(([id, gleis]) => {
+//       let prevSegment;
+//       gleis.pathSegments = gleis.pathSegments.map((path, index) => {
+//         if (path.type !== 'main') {
+//           return path;
+//         }
 
-        switch (gleis.type) {
-          case 'Crossing':
-          case 'Engels':
-            {
-              const points = [];
-              let skip = 0;
-              for (const p of gleis.points) {
-                if (p.type === 'c1' || p.type === 'c2') {
-                  if (prevSegment && skip >= 2) {
-                    points.push(getCoordString(p));
-                  } else if (!prevSegment && skip < 2) {
-                    points.push(getCoordString(p));
-                  }
-                  skip += 1;
-                }
-              }
-              path.gleisType = !!prevSegment ? 'Straight2' : 'Straight';
-              path.points = points;
-            }
-            break;
-          case 'Flex':
-          case 'Straight':
-          case 'Curve':
-            path.points = gleis.points
-              .filter((p) => p.type === 'c1' || p.type === 'c2')
-              .map((p) => getCoordString(p));
-            path.gleisType = gleis.type;
-            break;
-          case 'Turnout':
-          case 'TurnoutCurved':
-            {
-              const points = [];
-              let skip = 0;
-              for (const p of gleis.points) {
-                if (p.type === 'c1' || p.type === 'c2') {
-                  if (prevSegment && skip >= 2) {
-                    points.push(getCoordString(p));
-                    if (skip === 2) {
-                      points.push(prevSegment.points[0]);
-                    }
-                  } else if (!prevSegment && skip < 2) {
-                    points.push(getCoordString(p));
-                  }
-                  skip += 1;
-                }
-              }
-              if (gleis.type === 'TurnoutCurved') {
-                path.gleisType = !!prevSegment ? 'Curve2' : 'Curve';
-              } else {
-                path.gleisType = !!prevSegment ? 'Curve' : 'Straight';
-              }
+//         switch (gleis.type) {
+//           case 'Crossing':
+//           case 'Engels':
+//             {
+//               const points = [];
+//               let skip = 0;
+//               for (const p of gleis.points) {
+//                 if (p.type === 'c1' || p.type === 'c2') {
+//                   if (prevSegment && skip >= 2) {
+//                     points.push(getCoordString(p));
+//                   } else if (!prevSegment && skip < 2) {
+//                     points.push(getCoordString(p));
+//                   }
+//                   skip += 1;
+//                 }
+//               }
+//               path.gleisType = !!prevSegment ? 'Straight2' : 'Straight';
+//               path.points = points;
+//             }
+//             break;
+//           case 'Flex':
+//           case 'Straight':
+//           case 'Curve':
+//             path.points = gleis.points
+//               .filter((p) => p.type === 'c1' || p.type === 'c2')
+//               .map((p) => getCoordString(p));
+//             path.gleisType = gleis.type;
+//             break;
+//           case 'Turnout':
+//           case 'TurnoutCurved':
+//             {
+//               const points = [];
+//               let skip = 0;
+//               for (const p of gleis.points) {
+//                 if (p.type === 'c1' || p.type === 'c2') {
+//                   if (prevSegment && skip >= 2) {
+//                     points.push(getCoordString(p));
+//                     if (skip === 2) {
+//                       points.push(prevSegment.points[0]);
+//                     }
+//                   } else if (!prevSegment && skip < 2) {
+//                     points.push(getCoordString(p));
+//                   }
+//                   skip += 1;
+//                 }
+//               }
+//               if (gleis.type === 'TurnoutCurved') {
+//                 path.gleisType = !!prevSegment ? 'Curve2' : 'Curve';
+//               } else {
+//                 path.gleisType = !!prevSegment ? 'Curve' : 'Straight';
+//               }
 
-              path.points = points;
-            }
-            break;
+//               path.points = points;
+//             }
+//             break;
 
-          case 'ThreeWay':
-            // TODO: Implement!!!
-            break;
-        }
-        prevSegment = path;
-        return path;
-      });
+//           case 'ThreeWay':
+//             // TODO: Implement!!!
+//             break;
+//         }
+//         prevSegment = path;
+//         return path;
+//       });
 
-      return [id, gleis];
-    });
-    return gleisPlanned;
-  });
-};
+//       return [id, gleis];
+//     });
+//     return gleisPlanned;
+//   });
+// };
 
 export const gleisPlannedWithPaths = derived(
   [gleisPlannedDB, trackLibByArtNr],
@@ -733,35 +733,35 @@ export const gleisPlannedWithPaths = derived(
   }
 );
 
-window.updateGleisPlanned = () => {
-  const withPaths = get(gleisPlannedWithPaths);
-  updateGleisPlanned(() =>
-    Object.fromEntries(
-      withPaths.map(([id, gleis]) => {
-        // let points = gleis.points;
-        // if (gleis.type === 'Flex' && points[0].type === 'c2') {
-        //   const [c2, cp1, cp2, c1] = points;
-        //   points = [c1, cp1, cp2, c2];
-        // } else if (points[0].type === 'c2') {
-        //   const [c2, c1] = points;
-        //   points = [c1, c2];
-        // }
-        return [
-          id,
-          Object.assign(gleis, {
-            // points,
-            pathSegments: gleis.pathSegments.map((ps) => {
-              return {
-                ...ps,
-                d: ps.d.toString(),
-              };
-            }),
-          }),
-        ];
-      })
-    )
-  );
-};
+// window.updateGleisPlanned = () => {
+//   const withPaths = get(gleisPlannedWithPaths);
+//   updateGleisPlanned(() =>
+//     Object.fromEntries(
+//       withPaths.map(([id, gleis]) => {
+//         // let points = gleis.points;
+//         // if (gleis.type === 'Flex' && points[0].type === 'c2') {
+//         //   const [c2, cp1, cp2, c1] = points;
+//         //   points = [c1, cp1, cp2, c2];
+//         // } else if (points[0].type === 'c2') {
+//         //   const [c2, c1] = points;
+//         //   points = [c1, c2];
+//         // }
+//         return [
+//           id,
+//           Object.assign(gleis, {
+//             // points,
+//             pathSegments: gleis.pathSegments.map((ps) => {
+//               return {
+//                 ...ps,
+//                 d: ps.d.toString(),
+//               };
+//             }),
+//           }),
+//         ];
+//       })
+//     )
+//   );
+// };
 
 // window.updateIds = () => {
 //   const gleis = JSON.parse(JSON.stringify(get(gleisPlanned)));

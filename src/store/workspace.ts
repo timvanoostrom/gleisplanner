@@ -5,7 +5,6 @@ import { downloadJSON, generateID, jsonCopy } from '../helpers/app';
 import type {
   Dimensions,
   GleisPlanSaved,
-  GleisPropsPlanned,
   Guide,
   Guides,
   Layer,
@@ -14,7 +13,6 @@ import type {
   SlopeConfig,
   Slopes,
 } from '../types';
-import { SectionDirection } from '../types';
 import { appConfig, appConfigValue, APP_CONFIG_DEFAULT, db } from './appConfig';
 import { gleisPlanned, gleisPlannedDB, setGleisIdActive } from './gleis';
 import {
@@ -329,9 +327,9 @@ export const slopesByLayerId = derived(
 //   });
 // };
 
-window.selectGleis = (id: string) => {
-  setGleisIdActive(id);
-};
+// window.selectGleis = (id: string) => {
+//   setGleisIdActive(id);
+// };
 
 export const guidesInLayer = derived(
   [guides, layersById],

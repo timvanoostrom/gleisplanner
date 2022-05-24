@@ -44,7 +44,6 @@
     hasBlocksAssigned,
     hasMultipleSectionsSelected,
     hasSectionsAssigned,
-    isSectionsChain,
     toggleSection,
   } from './store/sections';
   import {
@@ -109,11 +108,7 @@
               <Icon size={12} name="exclamation-triangle" />
             {/if}
           </Button>
-          <Button
-            isActive={$hasBlocksAssigned}
-            disabled={!$isSectionsChain}
-            on:click={() => assignBlock()}
-          >
+          <Button isActive={$hasBlocksAssigned} on:click={() => assignBlock()}>
             Block
           </Button>
         </ControlMenuPanel>

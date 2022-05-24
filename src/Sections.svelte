@@ -15,7 +15,6 @@
   import Icon from './Icon.svelte';
   import { gleisIdsActive, gleisPlanned } from './store/gleis';
   import { toggleTool, tools } from './store/workspace';
-  import { SectionDirection } from './types';
 
   $: blockIdActive = $gleisIdsActive
     .map((id) => $gleisPlanned[id])
@@ -31,7 +30,7 @@
       on:click={() =>
         toggleTool('section', {
           action: 'create',
-          data: { title: 'X-B#', direction: SectionDirection.C1_C2 },
+          data: { title: 'X-B#', direction: 'C1_C2' },
         })}
     >
       Add
@@ -102,7 +101,7 @@
               type="radio"
               bind:group={$tools.section.data.direction}
               name="blockDirection"
-              value={SectionDirection.C1_C2}
+              value={'C1_C2'}
             />
             C1 &mdash; C2
           </label>
@@ -111,7 +110,7 @@
               type="radio"
               bind:group={$tools.section.data.direction}
               name="blockDirection"
-              value={SectionDirection.C2_C1}
+              value={'C2_C1'}
             />
             C2 &mdash; C1
           </label>
@@ -120,7 +119,7 @@
               type="radio"
               bind:group={$tools.section.data.direction}
               name="blockDirection"
-              value={SectionDirection.CX_CX}
+              value={'CX_CX'}
             />
             CX &mdash; CX
           </label>

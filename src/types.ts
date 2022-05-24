@@ -101,11 +101,7 @@ export interface SlopeConfig extends SlopeConfigBase {
 
 export type Slopes = Record<string, SlopeConfig>;
 
-export enum SectionDirection {
-  C1_C2 = 1,
-  C2_C1 = 2,
-  CX_CX = 3,
-}
+export type SectionDirection = 'C1_C2' | 'C2_C1' | 'CX_CX';
 
 export interface Section {
   id: string;
@@ -249,3 +245,63 @@ export interface TrackLib {
 export interface Tab {
   title: string;
 }
+
+type PointString = string;
+
+export type GleisLink = [
+  /* FROM: */
+  PointString,
+  GleisPropsPlanned | null,
+  /* TO: */
+  PointString,
+  GleisPropsPlanned | null
+];
+
+export type LinkedRoute = GleisLink[];
+
+export interface Route {
+  id: string;
+  links: GleisLink[];
+  path: string;
+  length: number;
+}
+
+export interface BezetzRoute {
+  route: Route;
+  activeLinkIndex: number;
+  activePathSegments: string[];
+  endAtPoint: Point | null;
+}
+
+export interface LocoRoutes {
+  routes: {
+    [routeId: string]: BezetzRoute;
+  };
+  activeRouteId: string;
+  departureBlockID: Block['id'];
+  destinationBlockID: Block['id'];
+}
+
+export interface BezetzRoutes {
+  [locoID: string]: LocoRoutes;
+}
+
+export interface Loco {
+  id: string;
+  title: string;
+  atPoint?: Point;
+  direction: SectionDirection;
+  velocity: number;
+  color: string;
+  length?: number;
+  isWaiting?: boolean;
+}
+
+export interface Locos {
+  [id: string]: Loco;
+}
+
+export type ActiveLinkRegistry = Record<
+  Loco['id'],
+  { nextID: GleisPropsPlanned['id']; currentID: GleisPropsPlanned['id'] }
+>;

@@ -1,22 +1,27 @@
 <script lang="ts">
-  import {
-    afterUpdate,
-    beforeUpdate,
-    createEventDispatcher,
-    onDestroy,
-  } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
   import { svgPathProperties } from 'svg-path-properties';
-  import type SVGPathProperties from 'svg-path-properties/dist/types/svg-path-properties';
   import { isWithinRadius } from './helpers/geometry';
   import { getCoordString } from './store/gleis';
-  import type { Loco } from './store/sections';
-  import type { Point } from './types';
+  import type { Loco, Point } from './types';
 
   export let loco: Loco = null;
   export let path: string = '';
   export let endAtPoint: Point = null;
 
   const dispatch = createEventDispatcher();
+
+  $: pathProps = path ? new svgPathProperties(path) : null;
+  $: atPoint = null;
+  $: pathLength = pathProps?.getTotalLength() ?? 0;
+
+  let endAtPointPathLength = pathLength;
+  let animationRequestID = null;
+  let pollingRequestID = null;
+  let curLength = 0;
+  let segLength = 0;
+  let startedAtPoint = null;
+  let startedAtPath = null;
 
   function findLengthAtPoint(path: typeof pathProps, point: Point) {
     const pathLength = path.getTotalLength();
@@ -30,19 +35,6 @@
     }
     return 0;
   }
-
-  $: pathProps = path ? new svgPathProperties(path) : null;
-  $: atPoint = null;
-  $: pathLength = pathProps?.getTotalLength() ?? 0;
-
-  let endAtPointPathLength = pathLength;
-  let animationRequestID = null;
-  let pollingRequestID = null;
-  let curLength = 0;
-  let segLength = 0;
-  let startedAtPoint = null;
-  let startedAtPath = null;
-  let currentSpeed = 0;
 
   function destroyAnimationRequestID() {
     cancelAnimationFrame(animationRequestID);
@@ -82,7 +74,6 @@
   }
 
   function dispatchPosition() {
-    // console.log('dispatch', loco.id);
     dispatch('pointAt', atPoint as Point);
     pollingRequestID = setTimeout(() => {
       dispatchPosition();
@@ -119,15 +110,14 @@
 
   $: {
     if (pathProps && loco.velocity !== 0 && !animationRequestID) {
-      console.log('start!', loco.id, pathProps, loco.velocity);
       destroyPollingRequestID();
       moveLoco();
     } else if (pathProps && loco.velocity === 0 && animationRequestID) {
-      console.log('stop!', loco.id);
       destroyAnimationRequestID();
-
       destroyPollingRequestID();
-      dispatchPosition();
+      if (loco.isWaiting) {
+        dispatchPosition();
+      }
     } else if (pollingRequestID) {
     }
   }

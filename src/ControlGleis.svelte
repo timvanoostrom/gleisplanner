@@ -1,11 +1,8 @@
 <script lang="ts">
   import { controlGleisIdsActive } from './store/gleis';
-  import {
-    previewControlRoute,
-    activeRouteSegments,
-    locoStackByGleisId,
-    activeLinkRegistry,
-  } from './store/sections';
+  import { locoStackByGleisId } from './store/loco';
+  import { activeLinkRegistry } from './store/sections';
+  import { activeRouteSegments, previewControlRoute } from './store/routes';
 
   import type { GleisPropsPlanned, ProtoGleis } from './types';
 
